@@ -392,7 +392,18 @@ function generateSlugInternal(text) {
 function getMilestoneInfo(cwd) {
   try {
     const roadmap = fs.readFileSync(path.join(cwd, '.planning', 'ROADMAP.md'), 'utf-8');
-    // Strip <details>...</details> blocks so shipped milestones don't interfere
+
+    // First: check for list-format roadmaps using 🚧 (in-progress) marker
+    // e.g. "- 🚧 **v2.1 Belgium** — Phases 24-28 (in progress)"
+    const inProgressMatch = roadmap.match(/🚧\s*\*\*v(\d+\.\d+)\s+([^*]+)\*\*/);
+    if (inProgressMatch) {
+      return {
+        version: 'v' + inProgressMatch[1],
+        name: inProgressMatch[2].trim(),
+      };
+    }
+
+    // Second: heading-format roadmaps — strip shipped milestones in <details> blocks
     const cleaned = roadmap.replace(/<details>[\s\S]*?<\/details>/gi, '');
     // Extract version and name from the same ## heading for consistency
     const headingMatch = cleaned.match(/## .*v(\d+\.\d+)[:\s]+([^\n(]+)/);
