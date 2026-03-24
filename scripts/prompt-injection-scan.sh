@@ -67,6 +67,8 @@ PATTERNS=(
 # Files that legitimately discuss injection patterns (security docs, tests, this script)
 ALLOWLIST=(
   'scripts/prompt-injection-scan.sh'
+  'scripts/base64-scan.sh'
+  'scripts/secret-scan.sh'
   'tests/security-scan.test.cjs'
   'tests/security.test.cjs'
   'tests/prompt-injection-scan.test.cjs'
