@@ -1026,6 +1026,14 @@ function cmdInitManager(cwd, raw) {
   });
 
   const completedCount = phases.filter(p => p.disk_status === 'complete').length;
+
+  // Read manager flags from config (passthrough flags for each step)
+  const managerFlags = {
+    discuss: (config.manager && config.manager.flags && config.manager.flags.discuss) || '',
+    plan: (config.manager && config.manager.flags && config.manager.flags.plan) || '',
+    execute: (config.manager && config.manager.flags && config.manager.flags.execute) || '',
+  };
+
   const result = {
     milestone_version: milestone.version,
     milestone_name: milestone.name,
@@ -1039,6 +1047,7 @@ function cmdInitManager(cwd, raw) {
     project_exists: pathExistsInternal(cwd, '.planning/PROJECT.md'),
     roadmap_exists: true,
     state_exists: true,
+    manager_flags: managerFlags,
   };
 
   output(withProjectRoot(cwd, result), raw);

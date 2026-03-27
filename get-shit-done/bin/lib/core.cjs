@@ -314,6 +314,7 @@ function loadConfig(cwd) {
       subagent_timeout: get('subagent_timeout', { section: 'workflow', field: 'subagent_timeout' }) ?? defaults.subagent_timeout,
       model_overrides: parsed.model_overrides || null,
       agent_skills: parsed.agent_skills || {},
+      manager: parsed.manager || {},
     };
   } catch {
     return defaults;
