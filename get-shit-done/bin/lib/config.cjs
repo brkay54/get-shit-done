@@ -31,6 +31,8 @@ const VALID_CONFIG_KEYS = new Set([
   'hooks.context_warnings',
   'features.thinking_partner',
   'context',
+  'features.global_learnings',
+  'learnings.max_inject',
   'project_code', 'phase_naming',
   'manager.flags.discuss', 'manager.flags.plan', 'manager.flags.execute',
   'response_language',
@@ -338,7 +340,7 @@ function cmdConfigSet(cwd, keyPath, value, raw) {
   validateKnownConfigKeyPath(keyPath);
 
   if (!isValidConfigKey(keyPath)) {
-    error(`Unknown config key: "${keyPath}". Valid keys: ${[...VALID_CONFIG_KEYS].sort().join(', ')}, agent_skills.<agent-type>`);
+    error(`Unknown config key: "${keyPath}". Valid keys: ${[...VALID_CONFIG_KEYS].sort().join(', ')}, agent_skills.<agent-type>, features.<feature_name>`);
   }
 
   // Parse value (handle booleans, numbers, and JSON arrays/objects)
