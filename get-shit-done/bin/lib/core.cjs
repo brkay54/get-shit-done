@@ -400,7 +400,11 @@ function loadConfig(cwd) {
 
 // ─── Git utilities ────────────────────────────────────────────────────────────
 
+const _gitIgnoredCache = new Map();
+
 function isGitIgnored(cwd, targetPath) {
+  const key = cwd + '::' + targetPath;
+  if (_gitIgnoredCache.has(key)) return _gitIgnoredCache.get(key);
   try {
     // --no-index checks .gitignore rules regardless of whether the file is tracked.
     // Without it, git check-ignore returns "not ignored" for tracked files even when
@@ -412,8 +416,10 @@ function isGitIgnored(cwd, targetPath) {
       cwd,
       stdio: 'pipe',
     });
+    _gitIgnoredCache.set(key, true);
     return true;
   } catch {
+    _gitIgnoredCache.set(key, false);
     return false;
   }
 }
