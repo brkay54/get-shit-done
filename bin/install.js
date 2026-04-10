@@ -6484,6 +6484,7 @@ if (process.env.GSD_TEST_MODE) {
     validateHookFields,
     preserveUserArtifacts,
     restoreUserArtifacts,
+    finishInstall,
   };
 } else {
 
