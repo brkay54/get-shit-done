@@ -6124,6 +6124,7 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   const isCursor = runtime === 'cursor';
   const isWindsurf = runtime === 'windsurf';
   const isTrae = runtime === 'trae';
+  const isCline = runtime === 'cline';
 
   if (shouldInstallStatusline && !isOpencode && !isKilo && !isCodex && !isCopilot && !isCursor && !isWindsurf && !isTrae) {
     settings.statusLine = {
@@ -6134,7 +6135,7 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   }
 
   // Write settings when runtime supports settings.json
-  if (!isCodex && !isCopilot && !isKilo && !isCursor && !isWindsurf && !isTrae) {
+  if (!isCodex && !isCopilot && !isKilo && !isCursor && !isWindsurf && !isTrae && !isCline) {
     writeSettings(settingsPath, settings);
   }
 
