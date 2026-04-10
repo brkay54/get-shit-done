@@ -154,6 +154,18 @@ describe('Cline install (local)', () => {
     assert.ok(fs.existsSync(engineDir), 'get-shit-done directory must exist after install');
   });
 
+  test('does not crash with ERR_INVALID_ARG_TYPE (regression: null settingsPath guard)', () => {
+    // Before fix: finishInstall() called writeSettings(null, ...) because isCline guard was missing
+    // After fix:  !isCline is in the writeSettings guard, matching codex/copilot/cursor/windsurf/trae
+    assert.doesNotThrow(() => install(false, 'cline'), /ERR_INVALID_ARG_TYPE/);
+  });
+
+  test('settings.json is not written for cline runtime', () => {
+    install(false, 'cline');
+    const settingsJson = path.join(tmpDir, '.cline', 'settings.json');
+    assert.ok(!fs.existsSync(settingsJson), 'settings.json must not be written for cline runtime');
+  });
+
   test('installed engine files have no leaked .claude paths', () => {
     install(false, 'cline');
     const engineDir = path.join(tmpDir, 'get-shit-done');
