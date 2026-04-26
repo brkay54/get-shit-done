@@ -395,6 +395,8 @@ describe('checkGraphifyVersion', () => {
     assert.strictEqual(calls.length, 1, 'exactly one spawnSync call — no python3 fallback');
     assert.strictEqual(calls[0].cmd, 'graphify');
     assert.ok(calls[0].args.includes('--version'), 'graphify called with --version');
+    const python3Calls = calls.filter(c => c.cmd === 'python3');
+    assert.strictEqual(python3Calls.length, 0, 'no python3 fallback when graphify --version succeeds');
   });
 
   test('falls back to python3 importlib.metadata when graphify --version fails', () => {
@@ -412,6 +414,7 @@ describe('checkGraphifyVersion', () => {
     assert.strictEqual(result.version, '0.4.3');
     assert.strictEqual(result.compatible, true);
     assert.ok(calls.length >= 2, 'at least two spawnSync calls (graphify attempt + python3 fallback)');
+    assert.strictEqual(calls[0].cmd, 'graphify', 'graphify call precedes python3 fallback');
     assert.ok(calls[0].args.includes('--version'), 'graphify --version attempted first');
     const lastCall = calls[calls.length - 1];
     assert.strictEqual(lastCall.cmd, 'python3', 'python3 fallback fires last');
