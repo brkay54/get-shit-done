@@ -923,6 +923,7 @@ npx get-shit-done-cc --antigravity --global --uninstall
 npx get-shit-done-cc --augment --global --uninstall
 npx get-shit-done-cc --trae --global --uninstall
 npx get-shit-done-cc --qwen --global --uninstall
+npx get-shit-done-cc --hermes --global --uninstall
 npx get-shit-done-cc --codebuddy --global --uninstall
 npx get-shit-done-cc --cline --global --uninstall
 
@@ -939,6 +940,7 @@ npx get-shit-done-cc --antigravity --local --uninstall
 npx get-shit-done-cc --augment --local --uninstall
 npx get-shit-done-cc --trae --local --uninstall
 npx get-shit-done-cc --qwen --local --uninstall
+npx get-shit-done-cc --hermes --local --uninstall
 npx get-shit-done-cc --codebuddy --local --uninstall
 npx get-shit-done-cc --cline --local --uninstall
 ```
