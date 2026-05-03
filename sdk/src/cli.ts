@@ -7,7 +7,6 @@
  */
 
 import { parseArgs } from 'node:util';
-import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve, join, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -284,49 +283,6 @@ function queryFallbackToCjsEnabled(): boolean {
   return true;
 }
 
-async function parseCliQueryJsonOutput(raw: string, projectDir: string): Promise<unknown> {
-  const trimmed = raw.trim();
-  if (trimmed === '') return null;
-  let jsonStr = trimmed;
-  if (jsonStr.startsWith('@file:')) {
-    const rel = jsonStr.slice(6).trim();
-    const { resolvePathUnderProject } = await import('./query/helpers.js');
-    const filePath = await resolvePathUnderProject(projectDir, rel);
-    jsonStr = await readFile(filePath, 'utf-8');
-  }
-  return JSON.parse(jsonStr);
-}
-
-/** Map registry-style dotted command tokens to gsd-tools.cjs argv (space-separated subcommands). */
-function dottedCommandToCjsArgv(normCmd: string, normArgs: string[]): string[] {
-  if (normCmd.includes('.')) {
-    return [...normCmd.split('.'), ...normArgs];
-  }
-  return [normCmd, ...normArgs];
-}
-
-function execGsdToolsCjsQuery(
-  projectDir: string,
-  gsdToolsPath: string,
-  normCmd: string,
-  normArgs: string[],
-  ws: string | undefined,
-): Promise<{ stdout: string; stderr: string }> {
-  const cjsArgv = dottedCommandToCjsArgv(normCmd, normArgs);
-  const wsSuffix = ws ? ['--ws', ws] : [];
-  const fullArgv = [gsdToolsPath, ...cjsArgv, ...wsSuffix];
-  return new Promise((resolve, reject) => {
-    execFile(
-      process.execPath,
-      fullArgv,
-      { cwd: projectDir, maxBuffer: 10 * 1024 * 1024, env: { ...process.env } },
-      (err, stdout, stderr) => {
-        if (err) reject(err);
-        else resolve({ stdout: stdout?.toString() ?? '', stderr: stderr?.toString() ?? '' });
-      },
-    );
-  });
-}
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
@@ -389,100 +345,28 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   // ─── Query command ──────────────────────────────────────────────────────
   if (args.command === 'query') {
     const { createRegistry } = await import('./query/index.js');
-    const { extractField, resolveQueryArgv } = await import('./query/registry.js');
-    const { GSDToolsError } = await import('./gsd-tools.js');
-    const { GSDError, exitCodeFor, ErrorClassification } = await import('./errors.js');
-
-    const queryArgs = args.queryArgv ?? [];
-
-    // Extract --pick before dispatch
-    const pickIdx = queryArgs.indexOf('--pick');
-    let pickField: string | undefined;
-    if (pickIdx !== -1) {
-      if (pickIdx + 1 >= queryArgs.length) {
-        console.error('Error: --pick requires a field name');
-        process.exitCode = 10;
-        return;
-      }
-      pickField = queryArgs[pickIdx + 1];
-      queryArgs.splice(pickIdx, 2);
-    }
-
-    if (queryArgs.length === 0 || !queryArgs[0]) {
-      console.error('Error: "gsd-sdk query" requires a command');
-      process.exitCode = 10;
-      return;
-    }
+    const { runQueryDispatch } = await import('./query/query-dispatch.js');
+    const { resolveGsdToolsPath, GSDToolsError } = await import('./gsd-tools.js');
+    const { GSDError, exitCodeFor } = await import('./errors.js');
 
     try {
-      const queryCommand = queryArgs[0];
-      const { normalizeQueryCommand } = await import('./query/normalize-query-command.js');
-      const [normCmd, normArgs] = normalizeQueryCommand(queryCommand, queryArgs.slice(1));
-      if (!normCmd || !String(normCmd).trim()) {
-        console.error('Error: "gsd-sdk query" requires a command');
-        process.exitCode = 10;
+      const registry = createRegistry();
+      const out = await runQueryDispatch({
+        registry,
+        projectDir: args.projectDir,
+        ws: args.ws,
+        cjsFallbackEnabled: queryFallbackToCjsEnabled(),
+        resolveGsdToolsPath,
+        dispatchNative: (cmd, argv) => registry.dispatch(cmd, argv, args.projectDir, args.ws),
+      }, args.queryArgv ?? []);
+
+      for (const line of out.stderr) console.error(line);
+      if (out.error) {
+        console.error(out.error.message);
+        process.exitCode = out.error.code;
         return;
       }
-      const registry = createRegistry();
-      const tokens = [normCmd, ...normArgs];
-      const matched = resolveQueryArgv(tokens, registry);
-      if (!matched) {
-        if (!queryFallbackToCjsEnabled()) {
-          throw new GSDError(
-            `Unknown command: "${tokens.join(' ')}". Use a registered \`gsd-sdk query\` subcommand (see sdk/src/query/QUERY-HANDLERS.md) or invoke \`node …/gsd-tools.cjs\` for CJS-only operations. Set GSD_QUERY_FALLBACK=registered (default) to allow automatic fallback.`,
-            ErrorClassification.Validation,
-          );
-        }
-        const { resolveGsdToolsPath } = await import('./gsd-tools.js');
-        const gsdPath = resolveGsdToolsPath(args.projectDir);
-        console.error(
-          `[gsd-sdk] '${tokens.join(' ')}' not in native registry; falling back to gsd-tools.cjs.`,
-        );
-        console.error('[gsd-sdk] Transparent bridge — prefer adding a native handler when parity matters.');
-        const { stdout, stderr } = await execGsdToolsCjsQuery(
-          args.projectDir,
-          gsdPath,
-          normCmd,
-          normArgs,
-          args.ws,
-        );
-        if (stderr.trim()) console.error(stderr.trimEnd());
-        // #3026 CR (Major outside-diff): the gsd-tools.cjs fallback now
-        // emits plain-text usage on --help / -h with exit 0, instead of
-        // a JSON object. Wrap the JSON parse in a try/catch and forward
-        // non-JSON stdout verbatim so subcommand help reaches the user.
-        // (Previously this path JSON.parsed the help text and threw
-        // "Unexpected token 'U'" — exitCode=1 — a regression introduced
-        // alongside the --help passthrough fix.)
-        let output: unknown;
-        try {
-          output = await parseCliQueryJsonOutput(stdout, args.projectDir);
-        } catch {
-          if (stdout.trim()) {
-            process.stdout.write(stdout.endsWith('\n') ? stdout : stdout + '\n');
-          }
-          return;
-        }
-        if (pickField) {
-          output = extractField(output, pickField);
-        }
-        console.log(JSON.stringify(output, null, 2));
-      } else {
-        const result = await registry.dispatch(matched.cmd, matched.args, args.projectDir, args.ws);
-        let output: unknown = result.data;
-
-        if (pickField) {
-          output = extractField(output, pickField);
-        }
-
-        // Handlers can signal format:'text' to emit a raw string (e.g. agent-skills
-        // emits an <agent_skills> XML block workflows embed via $(...) substitution).
-        if (!pickField && result.format === 'text' && typeof output === 'string') {
-          process.stdout.write(output);
-        } else {
-          console.log(JSON.stringify(output, null, 2));
-        }
-      }
+      if (out.stdout) process.stdout.write(out.stdout);
     } catch (err) {
       if (err instanceof GSDError) {
         console.error(`Error: ${err.message}`);
