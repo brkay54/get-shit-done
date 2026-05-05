@@ -1,6 +1,5 @@
 import type { GSDEventStream } from './event-stream.js';
 import { createRegistry } from './query/index.js';
-import type { QueryResult } from './query/utils.js';
 import { GSDTransport } from './gsd-transport.js';
 import { QueryExecutionPolicy } from './query-execution-policy.js';
 import { QuerySubprocessAdapter } from './query-subprocess-adapter.js';
@@ -47,12 +46,12 @@ export function createGSDToolsRuntime(opts: {
   });
 
   const transport = new GSDTransport(registry, {
-    dispatchNative: async (request) => nativeDirectAdapter.dispatchResult(
+    dispatchNative: (request) => nativeDirectAdapter.dispatchResult(
       request.legacyCommand,
       request.legacyArgs,
       request.registryCommand,
       request.registryArgs,
-    ) as Promise<QueryResult>,
+    ),
     execSubprocessJson: async (legacyCommand, legacyArgs) => subprocessAdapter.execJson(legacyCommand, legacyArgs),
     execSubprocessRaw: async (legacyCommand, legacyArgs) => subprocessAdapter.execRaw(legacyCommand, legacyArgs),
     formatNativeRaw: (registryCommand, data) => formatQueryRawOutput(registryCommand, data),
