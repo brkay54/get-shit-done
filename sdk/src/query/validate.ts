@@ -391,6 +391,31 @@ export const validateHealth: QueryHandler = async (args, projectDir, workstream)
     else info.push(issue);
   };
 
+  // Phases declared in current ROADMAP + every archived milestone ROADMAP
+  // (`.planning/milestones/v*-ROADMAP.md`). Used by W002 and W007 so phases
+  // that legitimately moved into a shipped-milestone snapshot don't get flagged.
+  const collectAllRoadmapPhases = async (): Promise<Set<string>> => {
+    const out = new Set<string>();
+    const phaseHeadingRe = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)/gi;
+    const readPhasesFromFile = async (path: string) => {
+      try {
+        const raw = await readFile(path, 'utf-8');
+        for (const m of raw.matchAll(phaseHeadingRe)) out.add(m[1]);
+      } catch { /* intentionally empty */ }
+    };
+    await readPhasesFromFile(roadmapPath);
+    const milestonesDir = join(planBase, 'milestones');
+    try {
+      const entries = await readdir(milestonesDir, { withFileTypes: true });
+      for (const e of entries) {
+        if (e.isFile() && /-ROADMAP\.md$/i.test(e.name)) {
+          await readPhasesFromFile(join(milestonesDir, e.name));
+        }
+      }
+    } catch { /* intentionally empty */ }
+    return out;
+  };
+
   // ─── Check 1: .planning/ exists ───────────────────────────────────────────
   if (!existsSync(planBase)) {
     addIssue('error', 'E001', '.planning/ directory not found', 'Run /gsd-new-project to initialize');
@@ -452,12 +477,10 @@ export const validateHealth: QueryHandler = async (args, projectDir, workstream)
 
       // Union in every phase declared anywhere in ROADMAP.md — current milestone,
       // shipped milestones (inside <details> / ✅ SHIPPED sections), and any
-      // preamble/Backlog. We deliberately do NOT filter by current milestone.
-      try {
-        const roadmapRaw = await readFile(roadmapPath, 'utf-8');
-        const all = [...roadmapRaw.matchAll(/#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)/gi)];
-        for (const m of all) validPhases.add(m[1]);
-      } catch { /* intentionally empty */ }
+      // preamble/Backlog. Also union archived milestone ROADMAPs so STATE.md
+      // refs to history phases (e.g. v1.0/v2.0/v3.2 ranges) don't false-flag.
+      const roadmapDeclared = await collectAllRoadmapPhases();
+      for (const p of roadmapDeclared) validPhases.add(p);
 
       // Compare canonical full phase tokens. Also accept a leading-zero
       // variant on the integer prefix only (e.g. "03" → "3", "03.1" → "3.1")
@@ -606,12 +629,22 @@ export const validateHealth: QueryHandler = async (args, projectDir, workstream)
   if (existsSync(roadmapPath)) {
     try {
       const roadmapContent = await readFile(roadmapPath, 'utf-8');
-      const roadmapPhases = new Set<string>();
+      // Two sets:
+      //   roadmapPhasesCurrent — only phases declared in the CURRENT ROADMAP.md.
+      //     Drives W006 ("phase in roadmap but no dir") because we should NOT
+      //     ask for stub dirs for phases that have been archived off into a
+      //     shipped milestone snapshot.
+      //   roadmapPhasesAny — current + every archived milestone ROADMAP.
+      //     Drives W007 ("phase on disk but not in roadmap") so an archived
+      //     phase dir still counts as "declared somewhere".
+      const roadmapPhasesCurrent = new Set<string>();
       const phasePattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:/gi;
       let m: RegExpExecArray | null;
       while ((m = phasePattern.exec(roadmapContent)) !== null) {
-        roadmapPhases.add(m[1]);
+        roadmapPhasesCurrent.add(m[1]);
       }
+      const roadmapPhasesAny = await collectAllRoadmapPhases();
+      for (const p of roadmapPhasesCurrent) roadmapPhasesAny.add(p);
 
       const diskPhases = new Set<string>();
       const collectPhases = async (dir: string) => {
@@ -665,7 +698,7 @@ export const validateHealth: QueryHandler = async (args, projectDir, workstream)
         }
       }
 
-      for (const p of roadmapPhases) {
+      for (const p of roadmapPhasesCurrent) {
         if (tbdPhases.has(p)) continue;
         const padded = String(parseInt(p, 10)).padStart(2, '0');
         if (!diskPhases.has(p) && !diskPhases.has(padded)) {
@@ -675,7 +708,7 @@ export const validateHealth: QueryHandler = async (args, projectDir, workstream)
 
       for (const p of diskPhases) {
         const unpadded = String(parseInt(p, 10));
-        if (!roadmapPhases.has(p) && !roadmapPhases.has(unpadded)) {
+        if (!roadmapPhasesAny.has(p) && !roadmapPhasesAny.has(unpadded)) {
           addIssue('warning', 'W007', `Phase ${p} exists on disk but not in ROADMAP.md`, 'Add to roadmap or remove directory');
         }
       }
