@@ -522,17 +522,40 @@ export const validateHealth: QueryHandler = async (args, projectDir, workstream)
     } catch { /* intentionally empty */ }
   }
 
+  // Load project_code once for prefix-aware checks below (W005, W006).
+  // The SDK creates phase dirs as `<project_code>-NN-name` when project_code is set
+  // (see phase-lifecycle.ts), so the validator must strip that same prefix
+  // before checking the NN-name pattern or extracting the phase number.
+  let projectCode = '';
+  if (existsSync(configPath)) {
+    try {
+      const raw = await readFile(configPath, 'utf-8');
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof parsed.project_code === 'string') projectCode = parsed.project_code;
+    } catch { /* intentionally empty */ }
+  }
+  const projectPrefix = projectCode ? `${projectCode}-` : '';
+
   // ─── Check 6: Phase directory naming (NN-name format) ─────────────────────
   try {
     const entries = await readdir(phasesDir, { withFileTypes: true });
     for (const e of entries) {
-      if (e.isDirectory() && !e.name.match(/^\d{2}(?:\.\d+)*-[\w-]+$/)) {
+      if (!e.isDirectory()) continue;
+      const stripped = projectPrefix && e.name.startsWith(projectPrefix)
+        ? e.name.slice(projectPrefix.length)
+        : e.name;
+      if (!stripped.match(/^\d{2}(?:\.\d+)*-[\w-]+$/)) {
         addIssue('warning', 'W005', `Phase directory "${e.name}" doesn't follow NN-name format`, 'Rename to match pattern (e.g., 01-setup)');
       }
     }
   } catch { /* intentionally empty */ }
 
   // ─── Check 7: Orphaned plans (PLAN without SUMMARY) ───────────────────────
+  // Pair plans and summaries by leading numeric ID (`NN-NN` or `NN.M-NN`),
+  // not by full filename base. This allows descriptive plan suffixes
+  // (e.g. `01.4-01-vendor-refresh-PLAN.md`) to match `01.4-01-SUMMARY.md`
+  // while still flagging plans whose ID has no matching summary at all.
+  const planIdRe = /^(\d+(?:\.\d+)?(?:-\d+)?)/;
   try {
     const entries = await readdir(phasesDir, { withFileTypes: true });
     for (const e of entries) {
@@ -541,12 +564,18 @@ export const validateHealth: QueryHandler = async (args, projectDir, workstream)
       const plans = phaseFiles.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
       const summaries = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
       const summaryBases = new Set(summaries.map(s => s.replace('-SUMMARY.md', '').replace('SUMMARY.md', '')));
+      const summaryIds = new Set<string>();
+      for (const s of summaries) {
+        const m = s.match(planIdRe);
+        if (m) summaryIds.add(m[1]);
+      }
 
       for (const plan of plans) {
         const planBase2 = plan.replace('-PLAN.md', '').replace('PLAN.md', '');
-        if (!summaryBases.has(planBase2)) {
-          addIssue('info', 'I001', `${e.name}/${plan} has no SUMMARY.md`, 'May be in progress');
-        }
+        if (summaryBases.has(planBase2)) continue;
+        const idm = plan.match(planIdRe);
+        if (idm && summaryIds.has(idm[1])) continue;
+        addIssue('info', 'I001', `${e.name}/${plan} has no SUMMARY.md`, 'May be in progress');
       }
     }
   } catch { /* intentionally empty */ }
@@ -585,17 +614,59 @@ export const validateHealth: QueryHandler = async (args, projectDir, workstream)
       }
 
       const diskPhases = new Set<string>();
-      try {
-        const entries = await readdir(phasesDir, { withFileTypes: true });
-        for (const e of entries) {
-          if (e.isDirectory()) {
-            const dm = e.name.match(/^(\d+[A-Z]?(?:\.\d+)*)/i);
+      const collectPhases = async (dir: string) => {
+        try {
+          const entries = await readdir(dir, { withFileTypes: true });
+          for (const e of entries) {
+            if (!e.isDirectory()) continue;
+            // Strip optional <project_code>- prefix so `abot-20-foo` matches phase 20
+            // in ROADMAP. The SDK's own phase-lifecycle prepends this prefix on create.
+            const baseName = projectPrefix && e.name.startsWith(projectPrefix)
+              ? e.name.slice(projectPrefix.length)
+              : e.name;
+            const dm = baseName.match(/^(\d+[A-Z]?(?:\.\d+)*)/i);
             if (dm) diskPhases.add(dm[1]);
+          }
+        } catch { /* intentionally empty */ }
+      };
+      await collectPhases(phasesDir);
+      // Also look in archived milestone phase locations (e.g. .planning/milestones/v1.0-phases/).
+      // Completed phases get archived here and the validator should treat them as fulfilling
+      // ROADMAP entries — otherwise Phase 0/1 etc. trigger spurious W006 warnings.
+      const milestonesDir = join(planBase, 'milestones');
+      try {
+        const milestoneEntries = await readdir(milestonesDir, { withFileTypes: true });
+        for (const m of milestoneEntries) {
+          if (m.isDirectory() && m.name.endsWith('-phases')) {
+            await collectPhases(join(milestonesDir, m.name));
           }
         }
       } catch { /* intentionally empty */ }
 
+      // Phases that are explicitly TBD in ROADMAP have not been planned yet — the
+      // missing directory is the expected state, not a fix-needed gap. Pre-compute
+      // which roadmap phases carry a `**Plans:** TBD` (or similar) marker so we
+      // can skip W006 for those.
+      const tbdPhases = new Set<string>();
+      const phaseSectionRe = /^#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:.*$/gim;
+      const sections: Array<{ id: string; start: number }> = [];
+      let sm: RegExpExecArray | null;
+      while ((sm = phaseSectionRe.exec(roadmapContent)) !== null) {
+        sections.push({ id: sm[1], start: sm.index });
+      }
+      for (let i = 0; i < sections.length; i++) {
+        const start = sections[i].start;
+        const end = i + 1 < sections.length ? sections[i + 1].start : roadmapContent.length;
+        const block = roadmapContent.slice(start, end);
+        // Matches `**Plans:** TBD`, `Plans: TBD`, `**Plans**: TBD`, etc.
+        // The closing `**` may sit on either side of the colon.
+        if (/^\s*\*{0,2}\s*Plans\s*\*{0,2}\s*:\s*\*{0,2}\s*TBD\b/im.test(block)) {
+          tbdPhases.add(sections[i].id);
+        }
+      }
+
       for (const p of roadmapPhases) {
+        if (tbdPhases.has(p)) continue;
         const padded = String(parseInt(p, 10)).padStart(2, '0');
         if (!diskPhases.has(p) && !diskPhases.has(padded)) {
           addIssue('warning', 'W006', `Phase ${p} in ROADMAP.md but no directory on disk`, 'Create phase directory or remove from roadmap');
