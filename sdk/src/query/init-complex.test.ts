@@ -482,3 +482,30 @@ describe('initManager workstream (#2731)', () => {
     }
   });
 });
+
+// init-complex.ts has its own getModelAlias wrapper (mirrors init.ts) used by
+// initNewProject. The wrapper must surface the 'inherit' sentinel — never
+// 'sonnet' — when resolveModel returns no concrete alias. Workflows recognize
+// 'inherit' and omit the model= parameter from spawned Task() calls.
+describe('initNewProject model resolution surfaces inherit sentinel', () => {
+  it("returns 'inherit' when resolve_model_ids is omit", async () => {
+    await writeFile(
+      join(tmpDir, '.planning', 'config.json'),
+      JSON.stringify({ model_profile: 'quality', resolve_model_ids: 'omit' }),
+    );
+    const result = await initNewProject([], tmpDir);
+    const data = result.data as Record<string, unknown>;
+    expect(data.researcher_model).toBe('inherit');
+    expect(data.synthesizer_model).toBe('inherit');
+    expect(data.roadmapper_model).toBe('inherit');
+  });
+
+  it("returns 'inherit' when no .planning/config.json exists", async () => {
+    await rm(join(tmpDir, '.planning', 'config.json'));
+    const result = await initNewProject([], tmpDir);
+    const data = result.data as Record<string, unknown>;
+    expect(data.researcher_model).toBe('inherit');
+    expect(data.synthesizer_model).toBe('inherit');
+    expect(data.roadmapper_model).toBe('inherit');
+  });
+});

@@ -152,7 +152,13 @@ describe('resolveModel', () => {
     expect(data).toHaveProperty('model', 'openai/gpt-5.4');
   });
 
-  it('returns empty model when resolve_model_ids is omit', async () => {
+  it("returns 'inherit' sentinel when resolve_model_ids is omit", async () => {
+    // Diverges from CJS parity (core.cjs:1572-1574 returns ''). The empty-string
+    // contract leaked into init wrappers and shell `--raw` callers as either
+    // model="" (Task rejects) or a silent sonnet coercion that defeated the
+    // user's chosen profile. Workflows recognize the 'inherit' sentinel and
+    // omit the model= parameter from Task() calls (precedent at
+    // get-shit-done/workflows/execute-phase.md "Model resolution" note).
     const { resolveModel } = await import('./config-query.js');
     await writeFile(
       join(tmpDir, '.planning', 'config.json'),
@@ -163,7 +169,7 @@ describe('resolveModel', () => {
     );
     const result = await resolveModel(['gsd-planner'], tmpDir);
     const data = result.data as Record<string, unknown>;
-    expect(data).toHaveProperty('model', '');
+    expect(data).toHaveProperty('model', 'inherit');
   });
 
   it('resolveModel uses workstream config when --ws is specified', async () => {

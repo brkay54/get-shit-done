@@ -40,6 +40,8 @@ Resolve advisor model:
 ADVISOR_MODEL=$(gsd-sdk query resolve-model gsd-advisor-researcher --raw)
 ```
 
+**Model resolution:** If `ADVISOR_MODEL` is `"inherit"`, omit the `model=` parameter from all `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when `ADVISOR_MODEL` is an explicit model name.
+
 ## Non-technical owner detection
 
 Read USER-PROFILE.md and check for product-owner signals:

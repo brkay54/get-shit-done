@@ -148,6 +148,8 @@ AGENT_SKILLS_VERIFIER=$(gsd-sdk query agent-skills gsd-verifier)
 
 Parse JSON for: `planner_model`, `executor_model`, `checker_model`, `verifier_model`, `commit_docs`, `branch_name`, `quick_id`, `slug`, `date`, `timestamp`, `quick_dir`, `task_dir`, `roadmap_exists`, `planning_exists`.
 
+**Model resolution:** If any of `planner_model`, `executor_model`, `checker_model`, or `verifier_model` is `"inherit"`, omit the `model=` parameter from the corresponding `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when the value is an explicit model name.
+
 ```bash
 USE_WORKTREES=$(gsd-sdk query config-get workflow.use_worktrees 2>/dev/null || echo "true")
 ```

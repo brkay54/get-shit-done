@@ -28,7 +28,8 @@ import { resolveModel, MODEL_PROFILES } from './config-query.js';
 import { maskIfSecret } from './secrets.js';
 import { findPhase } from './phase.js';
 import { roadmapGetPhase, getMilestoneInfo, extractCurrentMilestone, extractPhasesFromSection } from './roadmap.js';
-import { planningPaths, normalizePhaseName, toPosixPath, resolveAgentsDir, detectRuntime } from './helpers.js';
+import { planningPaths, normalizePhaseName, toPosixPath, resolveAgentsDir, detectRuntime, comparePhaseNum, stateExtractField } from './helpers.js';
+import { stateJson } from './state.js';
 import { relPlanningPath } from '../workstream-utils.js';
 import type { QueryHandler } from './utils.js';
 
@@ -36,11 +37,19 @@ import type { QueryHandler } from './utils.js';
 
 /**
  * Extract model alias string from a resolveModel result.
+ *
+ * Returns the sentinel `'inherit'` when `resolveModel` yields no concrete
+ * alias (i.e., `resolve_model_ids: "omit"`, missing config, or
+ * `model_profile: "inherit"`). Workflows recognize `'inherit'` and omit the
+ * `model=` parameter from spawned `Task()` calls — see the precedent at
+ * `get-shit-done/workflows/execute-phase.md` "Model resolution" note. The
+ * earlier `|| 'sonnet'` fallback silently pinned every subagent to Sonnet
+ * regardless of profile, defeating omit semantics.
  */
 async function getModelAlias(agentType: string, projectDir: string): Promise<string> {
   const result = await resolveModel([agentType], projectDir);
   const data = result.data as Record<string, unknown>;
-  return (data.model as string) || 'sonnet';
+  return (data.model as string) || 'inherit';
 }
 
 /**
@@ -216,6 +225,88 @@ function extractReqIds(roadmapPhase: Record<string, unknown> | null): string | n
   return (reqExtracted && reqExtracted !== 'TBD') ? reqExtracted : null;
 }
 
+interface RoadmapPhaseCandidate {
+  number: string;
+  name: string | null;
+  complete: boolean;
+}
+
+function extractRoadmapPhaseCandidates(section: string): RoadmapPhaseCandidate[] {
+  const phases = new Map<string, RoadmapPhaseCandidate>();
+
+  const upsert = (number: string, name: string | null, complete: boolean) => {
+    const existing = phases.get(number);
+    phases.set(number, {
+      number,
+      name: name ?? existing?.name ?? null,
+      complete: complete || existing?.complete || false,
+    });
+  };
+
+  const headingPattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:\s*([^\n]+)/gi;
+  let headingMatch: RegExpExecArray | null;
+  while ((headingMatch = headingPattern.exec(section)) !== null) {
+    upsert(headingMatch[1], headingMatch[2].replace(/\(INSERTED\)/i, '').trim(), false);
+  }
+
+  const checklistPattern = /-\s*\[(x| )\]\s*\*\*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:\s*([^*\n]+?)\*\*/gi;
+  let checklistMatch: RegExpExecArray | null;
+  while ((checklistMatch = checklistPattern.exec(section)) !== null) {
+    upsert(
+      checklistMatch[2],
+      checklistMatch[3].trim(),
+      checklistMatch[1].toLowerCase() === 'x',
+    );
+  }
+
+  return [...phases.values()].sort((a, b) => comparePhaseNum(a.number, b.number));
+}
+
+async function resolveExecutePhaseArg(
+  phase: string,
+  projectDir: string,
+  workstream?: string,
+): Promise<string> {
+  if (phase !== '--next') return phase;
+
+  try {
+    const [stateResult, roadmapContent] = await Promise.all([
+      stateJson([], projectDir, workstream),
+      readFile(planningPaths(projectDir, workstream).roadmap, 'utf-8'),
+    ]);
+    const state = stateResult.data as Record<string, unknown>;
+    const milestoneSection = await extractCurrentMilestone(roadmapContent, projectDir, workstream);
+    const candidates = extractRoadmapPhaseCandidates(milestoneSection);
+    if (candidates.length === 0) return phase;
+
+    let stateContent = '';
+    try {
+      stateContent = readFileSync(planningPaths(projectDir, workstream).state, 'utf-8');
+    } catch {
+      stateContent = '';
+    }
+    const currentPhaseRaw = typeof state.current_phase === 'string'
+      ? state.current_phase
+      : stateContent
+        ? (stateExtractField(stateContent, 'Current Phase') || stateExtractField(stateContent, 'Phase'))
+        : null;
+    const currentPhase = currentPhaseRaw ? normalizePhaseName(currentPhaseRaw) : null;
+
+    if (currentPhase) {
+      const nextAfterCurrent = candidates.find(
+        (candidate) =>
+          comparePhaseNum(candidate.number, currentPhase) > 0 && !candidate.complete,
+      );
+      if (nextAfterCurrent) return nextAfterCurrent.number;
+    }
+
+    const firstIncomplete = candidates.find((candidate) => !candidate.complete);
+    return firstIncomplete?.number ?? phase;
+  } catch {
+    return phase;
+  }
+}
+
 // ─── withProjectRoot ─────────────────────────────────────────────────────
 
 /**
@@ -273,7 +364,8 @@ export function withProjectRoot(
  * Port of cmdInitExecutePhase from init.cjs lines 50-171.
  */
 export const initExecutePhase: QueryHandler = async (args, projectDir, workstream) => {
-  const phase = args[0];
+  const rawPhase = args[0];
+  const phase = rawPhase ? await resolveExecutePhaseArg(rawPhase, projectDir, workstream) : rawPhase;
   if (!phase) {
     return { data: { error: 'phase required for init execute-phase' } };
   }
@@ -290,7 +382,7 @@ export const initExecutePhase: QueryHandler = async (args, projectDir, workstrea
         getModelAlias('gsd-executor', projectDir),
         getModelAlias('gsd-verifier', projectDir),
       ])
-    : ['', ''];
+    : ['inherit', 'inherit'];
 
   const milestone = await getMilestoneInfo(projectDir, workstream);
 
@@ -373,7 +465,7 @@ export const initPlanPhase: QueryHandler = async (args, projectDir, workstream) 
         getModelAlias('gsd-planner', projectDir),
         getModelAlias('gsd-plan-checker', projectDir),
       ])
-    : ['', '', ''];
+    : ['inherit', 'inherit', 'inherit'];
 
   const phaseNumber = (phaseInfo?.phase_number as string) || null;
   const plans = (phaseInfo?.plans || []) as string[];
@@ -526,7 +618,7 @@ export const initQuick: QueryHandler = async (args, projectDir) => {
         getModelAlias('gsd-plan-checker', projectDir),
         getModelAlias('gsd-verifier', projectDir),
       ])
-    : ['', '', '', ''];
+    : ['inherit', 'inherit', 'inherit', 'inherit'];
 
   const result: Record<string, unknown> = {
     planner_model: plannerModel,
@@ -601,7 +693,7 @@ export const initVerifyWork: QueryHandler = async (args, projectDir) => {
         getModelAlias('gsd-planner', projectDir),
         getModelAlias('gsd-plan-checker', projectDir),
       ])
-    : ['', ''];
+    : ['inherit', 'inherit'];
 
   const result: Record<string, unknown> = {
     planner_model: plannerModel,

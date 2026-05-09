@@ -69,7 +69,9 @@ mkdir -p .planning/codebase
 
 ## Step 4: Spawn mapper agent
 
-Spawn a single `gsd-codebase-mapper` agent with the selected focus area:
+Spawn a single `gsd-codebase-mapper` agent with the selected focus area.
+
+**Model resolution:** If `resolved_model` is `"inherit"`, omit the `model=` parameter from the `Task()` call below — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when `resolved_model` is an explicit model name.
 
 ```
 Task(

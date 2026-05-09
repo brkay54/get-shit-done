@@ -39,11 +39,17 @@ import type { QueryHandler } from './utils.js';
 
 /**
  * Get model alias string from resolveModel result.
+ *
+ * Returns the sentinel `'inherit'` when `resolveModel` yields no concrete
+ * alias (`resolve_model_ids: "omit"`, missing config, or
+ * `model_profile: "inherit"`). Mirrors `init.ts:getModelAlias`. Workflows
+ * recognize `'inherit'` and omit the `model=` parameter from `Task()` calls
+ * (see `get-shit-done/workflows/execute-phase.md` "Model resolution" note).
  */
 async function getModelAlias(agentType: string, projectDir: string): Promise<string> {
   const result = await resolveModel([agentType], projectDir);
   const data = result.data as Record<string, unknown>;
-  return (data.model as string) || 'sonnet';
+  return (data.model as string) || 'inherit';
 }
 
 /**

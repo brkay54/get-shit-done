@@ -66,6 +66,8 @@ AGENT_SKILLS_ROADMAPPER=$(gsd-sdk query agent-skills gsd-roadmapper)
 
 Parse JSON for: `researcher_model`, `synthesizer_model`, `roadmapper_model`, `commit_docs`, `project_exists`, `has_codebase_map`, `planning_exists`, `has_existing_code`, `has_package_file`, `is_brownfield`, `needs_codebase_map`, `has_git`, `project_path`, `agents_installed`, `missing_agents`.
 
+**Model resolution:** If any of `researcher_model`, `synthesizer_model`, or `roadmapper_model` is `"inherit"`, omit the `model=` parameter from the corresponding `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when the value is an explicit model name.
+
 **If `agents_installed` is false:** Display a warning before proceeding:
 ```
 ⚠ GSD agents not installed. The following agents are missing from your agents directory:

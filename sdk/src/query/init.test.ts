@@ -344,6 +344,51 @@ describe('initExecutePhase', () => {
     expect(data.branching_strategy).toBe('phase');
     expect(typeof data.branch_name).toBe('string');
   });
+
+  it('resolves --next to the next roadmap phase instead of the current active phase', async () => {
+    const result = await initExecutePhase(['--next'], tmpDir);
+    const data = result.data as Record<string, unknown>;
+    expect(data.phase_found).toBe(true);
+    expect(data.phase_number).toBe('10');
+  });
+
+  it('resolves --next from milestone checklist entries when the next phase has no directory yet', async () => {
+    await writeFile(join(tmpDir, '.planning', 'ROADMAP.md'), [
+      '# Roadmap',
+      '',
+      '## v3.0: SDK-First Migration',
+      '',
+      '- [ ] **Phase 9: Foundation**',
+      '- [ ] **Phase 10: Read-Only Queries**',
+      '- [ ] **Phase 11: Follow-up Work**',
+      '',
+      '### Phase 9: Foundation',
+      '',
+      '**Goal:** Build foundation',
+      '',
+    ].join('\n'));
+    await writeFile(join(tmpDir, '.planning', 'STATE.md'), [
+      '---',
+      'milestone: v3.0',
+      'status: executing',
+      'current_phase: "10"',
+      '---',
+      '',
+      '# Project State',
+      '',
+      '## Current Position',
+      '',
+      'Phase: 10 (read-only queries)',
+      'Plan: 1 of 1',
+      'Status: Executing',
+      '',
+    ].join('\n'));
+
+    const result = await initExecutePhase(['--next'], tmpDir);
+    const data = result.data as Record<string, unknown>;
+    expect(data.phase_found).toBe(false);
+    expect(data.phase_number).toBeNull();
+  });
 });
 
 describe('initPlanPhase', () => {
@@ -397,6 +442,53 @@ describe('initPlanPhase', () => {
       const result = await initPlanPhase(['9'], tmpDir);
       const data = result.data as Record<string, unknown>;
       expect(data.phase_req_ids).toBe('RV-01, RV-02');
+    });
+  });
+
+  // getModelAlias must surface the 'inherit' sentinel — never a hard-coded
+  // 'sonnet' fallback — whenever resolveModel returns no concrete alias.
+  // Workflows recognize 'inherit' and omit the model= parameter from Task()
+  // calls (precedent: get-shit-done/workflows/execute-phase.md).
+  describe('model resolution surfaces inherit sentinel', () => {
+    it('returns mapped alias when profile is set and resolve_model_ids is unset', async () => {
+      // Default fixture uses model_profile: 'balanced'.
+      // MODEL_PROFILES (config-query.ts:34): gsd-planner balanced -> 'opus',
+      // gsd-phase-researcher balanced -> 'sonnet'.
+      const result = await initPlanPhase(['9'], tmpDir);
+      const data = result.data as Record<string, unknown>;
+      expect(data.planner_model).toBe('opus');
+      expect(data.researcher_model).toBe('sonnet');
+    });
+
+    it("returns 'inherit' when resolve_model_ids is omit", async () => {
+      await writeFile(
+        join(tmpDir, '.planning', 'config.json'),
+        JSON.stringify({ model_profile: 'quality', resolve_model_ids: 'omit' }),
+      );
+      const result = await initPlanPhase(['9'], tmpDir);
+      const data = result.data as Record<string, unknown>;
+      expect(data.planner_model).toBe('inherit');
+      expect(data.researcher_model).toBe('inherit');
+      expect(data.checker_model).toBe('inherit');
+    });
+
+    it("returns 'inherit' when model_profile is inherit", async () => {
+      await writeFile(
+        join(tmpDir, '.planning', 'config.json'),
+        JSON.stringify({ model_profile: 'inherit' }),
+      );
+      const result = await initPlanPhase(['9'], tmpDir);
+      const data = result.data as Record<string, unknown>;
+      expect(data.planner_model).toBe('inherit');
+      expect(data.researcher_model).toBe('inherit');
+    });
+
+    it("returns 'inherit' when no .planning/config.json exists", async () => {
+      await rm(join(tmpDir, '.planning', 'config.json'));
+      const result = await initPlanPhase(['9'], tmpDir);
+      const data = result.data as Record<string, unknown>;
+      expect(data.planner_model).toBe('inherit');
+      expect(data.researcher_model).toBe('inherit');
     });
   });
 });

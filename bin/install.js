@@ -8657,9 +8657,12 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   }
 
   // For non-Claude runtimes, set resolve_model_ids: "omit" in ~/.gsd/defaults.json
-  // so resolveModelInternal() returns '' instead of Claude aliases (opus/sonnet/haiku)
-  // that the runtime can't resolve. Users can still use model_overrides for explicit IDs.
-  // See #1156.
+  // so the SDK's resolveModel() returns the 'inherit' sentinel (workflows omit
+  // the model= parameter from spawned Task() calls, letting the runtime use its
+  // own default) instead of Claude aliases (opus/sonnet/haiku) that the runtime
+  // can't resolve. Users can still use model_overrides for explicit IDs.
+  // See #1156. Sentinel switch landed alongside the omit-coercion fix in
+  // sdk/src/query/config-query.ts and getModelAlias wrappers.
   if (runtime !== 'claude') {
     const gsdDir = path.join(os.homedir(), '.gsd');
     const defaultsPath = path.join(gsdDir, 'defaults.json');

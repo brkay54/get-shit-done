@@ -28,6 +28,8 @@ AUDITOR_MODEL=$(gsd-sdk query resolve-model gsd-nyquist-auditor --raw)
 NYQUIST_CFG=$(gsd-sdk query config-get workflow.nyquist_validation --raw)
 ```
 
+**Model resolution:** If `AUDITOR_MODEL` is `"inherit"`, omit the `model=` parameter from all `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when `AUDITOR_MODEL` is an explicit model name.
+
 If `NYQUIST_CFG` is `false`: exit with "Nyquist validation is disabled. Enable via /gsd-settings."
 
 Display banner: `GSD > VALIDATE PHASE {N}: {name}`

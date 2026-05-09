@@ -28,6 +28,8 @@ Resolve integration checker model:
 integration_checker_model=$(gsd-sdk query resolve-model gsd-integration-checker --raw)
 ```
 
+**Model resolution:** If `integration_checker_model` is `"inherit"`, omit the `model=` parameter from all `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when `integration_checker_model` is an explicit model name.
+
 ## 1. Determine Milestone Scope
 
 ```bash

@@ -191,13 +191,24 @@ export const resolveModel: QueryHandler = async (args, projectDir, workstream) =
     return { data: result };
   }
 
-  // No project config (or explicit omit policy) -> return empty model id (CJS parity)
+  // No project config (or explicit omit policy) -> return the 'inherit' sentinel.
+  //
+  // Diverges from CJS resolveModelInternal (core.cjs:1572-1574) which returns ''
+  // for omit. The empty-string contract leaked into init.ts/init-complex.ts
+  // wrappers and shell `--raw` callers as either the literal string `model=""`
+  // (Task tool reject) or, via the prior `|| 'sonnet'` coercion in
+  // getModelAlias, an unintended hard-pin to Sonnet that defeated the user's
+  // chosen profile. Workflows already understand `'inherit'` (see the
+  // "Model resolution" note in get-shit-done/workflows/execute-phase.md) and
+  // omit the `model=` parameter from spawned `Task()` calls when they see it,
+  // letting the runtime / orchestrator decide. CJS is being phased out; the
+  // SDK is the long-term contract.
   const resolveModelIds = (config as Record<string, unknown>).resolve_model_ids;
   if (!configExists || resolveModelIds === 'omit') {
     const agentModels = MODEL_PROFILES[agentType];
     const result = agentModels
-      ? { model: '', profile }
-      : { model: '', profile, unknown_agent: true };
+      ? { model: 'inherit', profile }
+      : { model: 'inherit', profile, unknown_agent: true };
     return { data: result };
   }
 

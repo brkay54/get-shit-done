@@ -27,6 +27,8 @@ Extract from init JSON:
 - `doc_tooling` — object with booleans: `docusaurus`, `vitepress`, `mkdocs`, `storybook`
 - `monorepo_workspaces` — array of workspace glob patterns (empty if not a monorepo)
 - `project_root` — absolute path to the project root
+
+**Model resolution:** If `doc_writer_model` is `"inherit"`, omit the `model=` parameter from all `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when `doc_writer_model` is an explicit model name.
 </step>
 
 <step name="classify_project">

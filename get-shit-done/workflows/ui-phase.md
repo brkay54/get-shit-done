@@ -41,6 +41,8 @@ UI_RESEARCHER_MODEL=$(gsd-sdk query resolve-model gsd-ui-researcher --raw)
 UI_CHECKER_MODEL=$(gsd-sdk query resolve-model gsd-ui-checker --raw)
 ```
 
+**Model resolution:** If either `UI_RESEARCHER_MODEL` or `UI_CHECKER_MODEL` is `"inherit"`, omit the `model=` parameter from the corresponding `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when the value is an explicit model name.
+
 Check config:
 
 ```bash

@@ -28,6 +28,8 @@ AUDITOR_MODEL=$(gsd-sdk query resolve-model gsd-security-auditor --raw)
 SECURITY_CFG=$(gsd-sdk query config-get workflow.security_enforcement --raw 2>/dev/null || echo "true")
 ```
 
+**Model resolution:** If `AUDITOR_MODEL` is `"inherit"`, omit the `model=` parameter from all `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when `AUDITOR_MODEL` is an explicit model name.
+
 If `SECURITY_CFG` is `false`: exit with "Security enforcement disabled. Enable via /gsd-settings."
 
 Display banner: `GSD > SECURE PHASE {N}: {name}`
