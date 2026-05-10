@@ -51,20 +51,28 @@ function resolveWithinBase(target: string, baseDir: string): string | null {
 
 export const agentSkills: QueryHandler = async (args, projectDir) => {
   const agentType = (args[0] || '').trim();
-  // Match gsd-tools `cmdAgentSkills`: no agent type → empty string (JSON `""`), not a structured object.
+  // All empty returns set `format: 'text'` so the CLI dispatcher emits a real
+  // empty string (just `\n`) rather than the JSON-quoted literal `""`. The
+  // earlier behavior — empty data without `format` — was JSON-stringified to
+  // the two-character literal `""`, which workflows then captured into shell
+  // variables via `VAR=$(gsd-sdk query agent-skills X)`. Interpolating
+  // `${VAR}` into a Task prompt left a literal `""` line in the prompt sent
+  // to the spawned subagent (prompt pollution). The earlier test/comment
+  // "workflows that embed an empty var are no-ops" was wrong: shell captures
+  // the literal `""` characters, not empty.
   if (!agentType) {
-    return { data: '' };
+    return { data: '', format: 'text' };
   }
 
   let config;
   try {
     config = await loadConfig(projectDir);
   } catch {
-    return { data: '' };
+    return { data: '', format: 'text' };
   }
 
   const raw = config.agent_skills?.[agentType];
-  if (!raw) return { data: '' };
+  if (!raw) return { data: '', format: 'text' };
 
   let skillPaths: unknown[];
   if (typeof raw === 'string') {
@@ -72,9 +80,9 @@ export const agentSkills: QueryHandler = async (args, projectDir) => {
   } else if (Array.isArray(raw)) {
     skillPaths = raw;
   } else {
-    return { data: '' };
+    return { data: '', format: 'text' };
   }
-  if (skillPaths.length === 0) return { data: '' };
+  if (skillPaths.length === 0) return { data: '', format: 'text' };
 
   const globalSkillsBase = join(homedir(), '.claude', 'skills');
   const validEntries: Array<{ ref: string }> = [];
@@ -120,7 +128,7 @@ export const agentSkills: QueryHandler = async (args, projectDir) => {
     validEntries.push({ ref: `${entry}/SKILL.md` });
   }
 
-  if (validEntries.length === 0) return { data: '' };
+  if (validEntries.length === 0) return { data: '', format: 'text' };
 
   const lines = validEntries.map((e) => `- @${e.ref}`).join('\n');
   const block = `<agent_skills>\nRead these user-configured skills:\n${lines}\n</agent_skills>`;

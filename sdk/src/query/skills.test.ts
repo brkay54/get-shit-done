@@ -135,9 +135,16 @@ describe('agentSkills', () => {
     expect(r.format).toBe('text');
   });
 
-  it('does not signal format:"text" for empty result', async () => {
+  it('signals format:"text" for empty result so CLI emits real empty (not JSON-quoted "")', async () => {
+    // Earlier behavior emitted the literal two-character string `""` for empty
+    // results, which workflows captured via `VAR=$(gsd-sdk query …)` and then
+    // templated as `${VAR}` into Task prompts — leaving a stray `""` line in
+    // the prompt sent to spawned subagents (prompt pollution). The fix marks
+    // every empty-return path as text so the dispatcher emits a real empty
+    // string (just `\n`), letting `${VAR}` interpolate to nothing.
     const r = await agentSkills(['gsd-planner'], tmpDir);
-    expect(r.format).toBeUndefined();
+    expect(r.format).toBe('text');
+    expect(r.data).toBe('');
   });
 });
 
@@ -178,7 +185,7 @@ describe('agentSkills CLI stdout', () => {
     );
   });
 
-  it('emits empty output (no JSON null) when agent type is unmapped', async () => {
+  it('emits truly empty stdout (not literal "") when agent type is unmapped', async () => {
     await mkdir(join(tmpDir, '.planning'), { recursive: true });
     await writeFile(
       join(tmpDir, '.planning', 'config.json'),
@@ -190,9 +197,13 @@ describe('agentSkills CLI stdout', () => {
       { encoding: 'utf-8' },
     );
 
-    // Unmapped agent → empty string → CLI falls through to JSON (""), not raw
-    // text. This is acceptable: workflows that embed an empty var are no-ops.
-    // The important invariant is that a MAPPED agent never gets JSON-wrapped.
-    expect(stdout.trim()).toBe('""');
+    // Unmapped agent must emit truly empty output, not the JSON-quoted literal
+    // `""`. Workflows capture this with `VAR=$(gsd-sdk query agent-skills …)`
+    // and template `${VAR}` into Task prompts — the earlier `""` literal was
+    // shell-captured as two characters and showed up in the spawned subagent's
+    // prompt as a stray `""` line. The dispatcher now treats empty data with
+    // `format: 'text'` as just a newline, so the shell capture is empty.
+    expect(stdout).toBe('\n');
+    expect(stdout.trim()).toBe('');
   });
 });
