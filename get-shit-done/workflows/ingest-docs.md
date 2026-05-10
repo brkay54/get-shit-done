@@ -52,7 +52,7 @@ If `PATH_NOT_FOUND` or `MANIFEST_NOT_FOUND`: display error and exit.
 Run the init query:
 
 ```bash
-INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init ingest-docs)
+INIT=$(node "$HOME/.claude/get-shit-done/bingsd:tools.cjs" init ingest-docs)
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -123,7 +123,7 @@ De-duplicate the union (a file matched by multiple patterns is one doc).
 ```
 GSD > Discovered {N} docs, which exceeds the v1 cap of 50.
       Use --manifest to narrow the set to ≤ 50 files, or run
-      /gsd-ingest-docs again with a narrower <path>.
+      gsd:ingest-docs again with a narrower <path>.
 ```
 
 Exit without proceeding.
@@ -167,7 +167,7 @@ Per-spawn prompt fields:
 - `OUTPUT_DIR` — `.planning/intel/classifications/`
 - `MANIFEST_TYPE` — the type from the manifest if present, else omit
 - `MANIFEST_PRECEDENCE` — the precedence integer from the manifest if present, else omit
-- `<required_reading>` — `agents/gsd-doc-classifier.md` (the agent definition itself)
+- `<required_reading>` — `agentsgsd:doc-classifier.md` (the agent definition itself)
 
 Collect the one-line confirmations from each classifier. If any classifier errors out, surface the error and abort without touching `.planning/` further.
 
@@ -189,7 +189,7 @@ Task({
     PRECEDENCE: {array from manifest defaults or default ['ADR','SPEC','PRD','DOC']}
 
     <required_reading>
-    - agents/gsd-doc-synthesizer.md
+    - agentsgsd:doc-synthesizer.md
     - get-shit-done/references/doc-conflict-engine.md
     </required_reading>
   "
@@ -290,7 +290,7 @@ Preview the merge diff to the user and gate via approve-revise-abort before writ
 Commit the ingest results:
 
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit \
+node "$HOME/.claude/get-shit-done/bingsd:tools.cjs" commit \
   "docs: ingest {N} docs from {SCAN_PATH} (#2387)" --files \
   .planning/PROJECT.md \
   .planning/REQUIREMENTS.md \
@@ -315,7 +315,7 @@ Show:
 - Docs ingested (count + type breakdown)
 - Decisions locked, requirements created, constraints captured
 - Conflict report path (`.planning/INGEST-CONFLICTS.md`)
-- Next step: `/gsd-plan-phase 1` (new mode) or `/gsd-plan-phase N` (merge, pointing at the first newly-added phase)
+- Next step: `gsd:plan-phase 1` (new mode) or `gsd:plan-phase N` (merge, pointing at the first newly-added phase)
 
 </step>
 

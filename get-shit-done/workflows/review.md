@@ -61,7 +61,7 @@ No external AI CLIs found. Install at least one:
 - qwen: https://github.com/nicepkg/qwen-code (Alibaba Qwen models)
 - cursor: https://cursor.com (Cursor IDE agent mode)
 
-Then run /gsd-review again.
+Then run gsd:review again.
 ```
 Exit.
 
@@ -160,7 +160,7 @@ Focus on:
 Output your review in markdown format.
 ```
 
-Write to a temp file: `/tmp/gsd-review-prompt-{phase}.md`
+Write to a temp file: `/tmpgsd:review-prompt-{phase}.md`
 </step>
 
 <step name="invoke_reviewers">
@@ -179,27 +179,27 @@ For each selected CLI, invoke in sequence (not parallel — avoid rate limits):
 **Gemini:**
 ```bash
 if [ -n "$GEMINI_MODEL" ] && [ "$GEMINI_MODEL" != "null" ]; then
-  cat /tmp/gsd-review-prompt-{phase}.md | gemini -m "$GEMINI_MODEL" -p - 2>/dev/null > /tmp/gsd-review-gemini-{phase}.md
+  cat /tmpgsd:review-prompt-{phase}.md | gemini -m "$GEMINI_MODEL" -p - 2>/dev/null > /tmpgsd:review-gemini-{phase}.md
 else
-  cat /tmp/gsd-review-prompt-{phase}.md | gemini -p - 2>/dev/null > /tmp/gsd-review-gemini-{phase}.md
+  cat /tmpgsd:review-prompt-{phase}.md | gemini -p - 2>/dev/null > /tmpgsd:review-gemini-{phase}.md
 fi
 ```
 
 **Claude (separate session):**
 ```bash
 if [ -n "$CLAUDE_MODEL" ] && [ "$CLAUDE_MODEL" != "null" ]; then
-  cat /tmp/gsd-review-prompt-{phase}.md | claude --model "$CLAUDE_MODEL" -p - 2>/dev/null > /tmp/gsd-review-claude-{phase}.md
+  cat /tmpgsd:review-prompt-{phase}.md | claude --model "$CLAUDE_MODEL" -p - 2>/dev/null > /tmpgsd:review-claude-{phase}.md
 else
-  cat /tmp/gsd-review-prompt-{phase}.md | claude -p - 2>/dev/null > /tmp/gsd-review-claude-{phase}.md
+  cat /tmpgsd:review-prompt-{phase}.md | claude -p - 2>/dev/null > /tmpgsd:review-claude-{phase}.md
 fi
 ```
 
 **Codex:**
 ```bash
 if [ -n "$CODEX_MODEL" ] && [ "$CODEX_MODEL" != "null" ]; then
-  cat /tmp/gsd-review-prompt-{phase}.md | codex exec --model "$CODEX_MODEL" --skip-git-repo-check - 2>/dev/null > /tmp/gsd-review-codex-{phase}.md
+  cat /tmpgsd:review-prompt-{phase}.md | codex exec --model "$CODEX_MODEL" --skip-git-repo-check - 2>/dev/null > /tmpgsd:review-codex-{phase}.md
 else
-  cat /tmp/gsd-review-prompt-{phase}.md | codex exec --skip-git-repo-check - 2>/dev/null > /tmp/gsd-review-codex-{phase}.md
+  cat /tmpgsd:review-prompt-{phase}.md | codex exec --skip-git-repo-check - 2>/dev/null > /tmpgsd:review-codex-{phase}.md
 fi
 ```
 
@@ -208,34 +208,34 @@ fi
 Note: CodeRabbit reviews the current git diff/working tree — it does not accept a prompt or model flag. It may take up to 5 minutes. Use `timeout: 360000` on the Bash tool call.
 
 ```bash
-coderabbit review --prompt-only 2>/dev/null > /tmp/gsd-review-coderabbit-{phase}.md
+coderabbit review --prompt-only 2>/dev/null > /tmpgsd:review-coderabbit-{phase}.md
 ```
 
 **OpenCode (via GitHub Copilot):**
 ```bash
 if [ -n "$OPENCODE_MODEL" ] && [ "$OPENCODE_MODEL" != "null" ]; then
-  cat /tmp/gsd-review-prompt-{phase}.md | opencode run --model "$OPENCODE_MODEL" - 2>/dev/null > /tmp/gsd-review-opencode-{phase}.md
+  cat /tmpgsd:review-prompt-{phase}.md | opencode run --model "$OPENCODE_MODEL" - 2>/dev/null > /tmpgsd:review-opencode-{phase}.md
 else
-  cat /tmp/gsd-review-prompt-{phase}.md | opencode run - 2>/dev/null > /tmp/gsd-review-opencode-{phase}.md
+  cat /tmpgsd:review-prompt-{phase}.md | opencode run - 2>/dev/null > /tmpgsd:review-opencode-{phase}.md
 fi
-if [ ! -s /tmp/gsd-review-opencode-{phase}.md ]; then
-  echo "OpenCode review failed or returned empty output." > /tmp/gsd-review-opencode-{phase}.md
+if [ ! -s /tmpgsd:review-opencode-{phase}.md ]; then
+  echo "OpenCode review failed or returned empty output." > /tmpgsd:review-opencode-{phase}.md
 fi
 ```
 
 **Qwen Code:**
 ```bash
-cat /tmp/gsd-review-prompt-{phase}.md | qwen - 2>/dev/null > /tmp/gsd-review-qwen-{phase}.md
-if [ ! -s /tmp/gsd-review-qwen-{phase}.md ]; then
-  echo "Qwen review failed or returned empty output." > /tmp/gsd-review-qwen-{phase}.md
+cat /tmpgsd:review-prompt-{phase}.md | qwen - 2>/dev/null > /tmpgsd:review-qwen-{phase}.md
+if [ ! -s /tmpgsd:review-qwen-{phase}.md ]; then
+  echo "Qwen review failed or returned empty output." > /tmpgsd:review-qwen-{phase}.md
 fi
 ```
 
 **Cursor:**
 ```bash
-cat /tmp/gsd-review-prompt-{phase}.md | cursor agent -p --mode ask --trust 2>/dev/null > /tmp/gsd-review-cursor-{phase}.md
-if [ ! -s /tmp/gsd-review-cursor-{phase}.md ]; then
-  echo "Cursor review failed or returned empty output." > /tmp/gsd-review-cursor-{phase}.md
+cat /tmpgsd:review-prompt-{phase}.md | cursor agent -p --mode ask --trust 2>/dev/null > /tmpgsd:review-cursor-{phase}.md
+if [ ! -s /tmpgsd:review-cursor-{phase}.md ]; then
+  echo "Cursor review failed or returned empty output." > /tmpgsd:review-cursor-{phase}.md
 fi
 ```
 
@@ -250,15 +250,15 @@ OLLAMA_MODEL=$(gsd-sdk query config-get review.models.ollama 2>/dev/null | jq -r
 if [ -z "$OLLAMA_MODEL" ] || [ "$OLLAMA_MODEL" = "null" ]; then
   OLLAMA_MODEL=$(curl -s --max-time 2 "${OLLAMA_HOST}/v1/models" 2>/dev/null | jq -r '.data[0].id // "llama3"' 2>/dev/null || echo "llama3")
 fi
-jq -n --rawfile content /tmp/gsd-review-prompt-{phase}.md \
+jq -n --rawfile content /tmpgsd:review-prompt-{phase}.md \
   --arg model "$OLLAMA_MODEL" \
   '{model: $model, messages: [{role: "user", content: $content}]}' | \
   curl -s --max-time 120 -X POST "${OLLAMA_HOST}/v1/chat/completions" \
     -H "Content-Type: application/json" -d @- 2>/dev/null | \
   jq -r '.choices[0].message.content // "Ollama review failed or returned empty output."' \
-  > /tmp/gsd-review-ollama-{phase}.md
-if [ ! -s /tmp/gsd-review-ollama-{phase}.md ]; then
-  echo "Ollama review failed or returned empty output." > /tmp/gsd-review-ollama-{phase}.md
+  > /tmpgsd:review-ollama-{phase}.md
+if [ ! -s /tmpgsd:review-ollama-{phase}.md ]; then
+  echo "Ollama review failed or returned empty output." > /tmpgsd:review-ollama-{phase}.md
 fi
 ```
 
@@ -270,7 +270,7 @@ LM_STUDIO_MODEL=$(gsd-sdk query config-get review.models.lm_studio 2>/dev/null |
 if [ -z "$LM_STUDIO_MODEL" ] || [ "$LM_STUDIO_MODEL" = "null" ]; then
   LM_STUDIO_MODEL=$(curl -s --max-time 2 "${LM_STUDIO_HOST}/v1/models" 2>/dev/null | jq -r '.data[0].id // "local-model"' 2>/dev/null || echo "local-model")
 fi
-LM_STUDIO_RESPONSE=$(jq -n --rawfile content /tmp/gsd-review-prompt-{phase}.md \
+LM_STUDIO_RESPONSE=$(jq -n --rawfile content /tmpgsd:review-prompt-{phase}.md \
   --arg model "$LM_STUDIO_MODEL" \
   '{model: $model, messages: [{role: "user", content: $content}]}' | \
   curl -s --max-time 120 -X POST "${LM_STUDIO_HOST}/v1/chat/completions" \
@@ -281,7 +281,7 @@ if [ -n "$LM_STUDIO_ACTUAL_MODEL" ] && [ "$LM_STUDIO_ACTUAL_MODEL" != "null" ] &
 fi
 LM_STUDIO_CONTENT=$(echo "$LM_STUDIO_RESPONSE" | jq -r '.choices[0].message.content // ""' 2>/dev/null || echo "")
 if [ -n "$LM_STUDIO_CONTENT" ]; then
-  echo "$LM_STUDIO_CONTENT" > /tmp/gsd-review-lm_studio-{phase}.md
+  echo "$LM_STUDIO_CONTENT" > /tmpgsd:review-lm_studio-{phase}.md
 else
   echo "Warning: LM Studio returned empty content — skipping review." >&2
 fi
@@ -295,14 +295,14 @@ LLAMA_CPP_MODEL=$(gsd-sdk query config-get review.models.llama_cpp 2>/dev/null |
 if [ -z "$LLAMA_CPP_MODEL" ] || [ "$LLAMA_CPP_MODEL" = "null" ]; then
   LLAMA_CPP_MODEL=$(curl -s --max-time 2 "${LLAMA_CPP_HOST}/v1/models" 2>/dev/null | jq -r '.data[0].id // "local-model"' 2>/dev/null || echo "local-model")
 fi
-LLAMA_CPP_CONTENT=$(jq -n --rawfile content /tmp/gsd-review-prompt-{phase}.md \
+LLAMA_CPP_CONTENT=$(jq -n --rawfile content /tmpgsd:review-prompt-{phase}.md \
   --arg model "$LLAMA_CPP_MODEL" \
   '{model: $model, messages: [{role: "user", content: $content}]}' | \
   curl -s --max-time 120 -X POST "${LLAMA_CPP_HOST}/v1/chat/completions" \
     -H "Content-Type: application/json" -d @- 2>/dev/null | \
   jq -r '.choices[0].message.content // ""' 2>/dev/null || echo "")
 if [ -n "$LLAMA_CPP_CONTENT" ]; then
-  echo "$LLAMA_CPP_CONTENT" > /tmp/gsd-review-llama_cpp-{phase}.md
+  echo "$LLAMA_CPP_CONTENT" > /tmpgsd:review-llama_cpp-{phase}.md
 else
   echo "Warning: llama.cpp returned empty content — skipping review." >&2
 fi
@@ -430,7 +430,7 @@ Consensus concerns:
 Full review: {padded_phase}-REVIEWS.md
 
 To incorporate feedback into planning:
-  /gsd-plan-phase {N} --reviews
+  gsd:plan-phase {N} --reviews
 ```
 
 Clean up temp files.
@@ -443,5 +443,5 @@ Clean up temp files.
 - [ ] REVIEWS.md written with structured feedback
 - [ ] Consensus summary synthesized from multiple reviewers
 - [ ] Temp files cleaned up
-- [ ] User knows how to use feedback (/gsd-plan-phase --reviews)
+- [ ] User knows how to use feedback (gsd:plan-phase --reviews)
 </success_criteria>

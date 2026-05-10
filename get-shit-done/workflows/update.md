@@ -20,7 +20,7 @@ First, derive `PREFERRED_CONFIG_DIR` and `PREFERRED_RUNTIME` from the invoking p
 - Otherwise -> `claude`
 
 Use `PREFERRED_CONFIG_DIR` when available so custom `--config-dir` installs are checked before default locations.
-Use `PREFERRED_RUNTIME` as the first runtime checked so `/gsd-update` targets the runtime that invoked it.
+Use `PREFERRED_RUNTIME` as the first runtime checked so `gsd:update` targets the runtime that invoked it.
 
 Kilo config precedence must match the installer: `KILO_CONFIG_DIR` -> `dirname(KILO_CONFIG)` -> `XDG_CONFIG_HOME/kilo` -> `~/.config/kilo`.
 
@@ -356,7 +356,7 @@ by re-running the local installer from your dev branch:
 
     node bin/install.js --global --claude
 
-Running /gsd-update would install the npm release (A.B.C) and downgrade
+Running gsd:update would install the npm release (A.B.C) and downgrade
 your dev version — do NOT use it to resolve this warning.
 ```
 
@@ -394,7 +394,7 @@ Exit.
 ⚠️  **Note:** The installer performs a clean install of GSD folders:
 - `commands/gsd/` will be wiped and replaced
 - `get-shit-done/` will be wiped and replaced
-- `agents/gsd-*` files will be replaced
+- `agentsgsd:*` files will be replaced
 
 (Paths are relative to detected runtime install location:
 global: `~/.claude/`, `~/.config/opencode/`, `~/.opencode/`, `~/.gemini/`, `~/.config/kilo/`, or `~/.codex/`
@@ -406,7 +406,7 @@ Your custom files in other locations are preserved:
 - Custom hooks ✓
 - Your CLAUDE.md files ✓
 
-If you've modified any GSD files directly, they'll be automatically backed up to `gsd-local-patches/` and can be reapplied with `/gsd-update --reapply` after the update.
+If you've modified any GSD files directly, they'll be automatically backed up to `gsd-local-patches/` and can be reapplied with `gsd:update --reapply` after the update.
 ```
 
 
@@ -455,7 +455,7 @@ inspect).
 Otherwise run `detect-custom-files` (prefer SDK when available):
 
 ```bash
-GSD_TOOLS="$RUNTIME_DIR/get-shit-done/bin/gsd-tools.cjs"
+GSD_TOOLS="$RUNTIME_DIR/get-shit-done/bingsd:tools.cjs"
 CUSTOM_JSON=''
 if [ -n "$RUNTIME_DIR" ] && command -v gsd-sdk >/dev/null 2>&1; then
   CUSTOM_JSON=$(gsd-sdk query detect-custom-files --config-dir "$RUNTIME_DIR" 2>/dev/null)
@@ -470,11 +470,11 @@ CUSTOM_COUNT=$(echo "$CUSTOM_JSON" | node -e "process.stdin.resume();let d='';pr
 
 **If `CUSTOM_COUNT` > 0:**
 
-Back up each custom file to `$RUNTIME_DIR/gsd-user-files-backup/` before the
+Back up each custom file to `$RUNTIME_DIRgsd:user-files-backup/` before the
 installer wipes the directories:
 
 ```bash
-BACKUP_DIR="$RUNTIME_DIR/gsd-user-files-backup"
+BACKUP_DIR="$RUNTIME_DIRgsd:user-files-backup"
 mkdir -p "$BACKUP_DIR"
 
 # Parse custom_files array from CUSTOM_JSON and copy each file
@@ -577,19 +577,19 @@ fi
 
 for dir in "${CACHE_DIRS[@]}"; do
   if [ -n "$dir" ]; then
-    rm -f "$dir/cache/gsd-update-check.json"
+    rm -f "$dir/cachegsd:update-check.json"
   fi
 done
 
 for dir in .claude .config/opencode .opencode .gemini .config/kilo .kilo .codex; do
-  rm -f "./$dir/cache/gsd-update-check.json"
-  rm -f "$HOME/$dir/cache/gsd-update-check.json"
+  rm -f "./$dir/cachegsd:update-check.json"
+  rm -f "$HOME/$dir/cachegsd:update-check.json"
 done
 
 # Clear the shared tool-agnostic cache written by gsd-check-update.js hook (#2784).
-# The hook uses ~/.cache/gsd/gsd-update-check.json regardless of runtime; clear it
-# so the statusline stops showing the stale "⬆ /gsd-update" indicator after update.
-rm -f "$HOME/.cache/gsd/gsd-update-check.json"
+# The hook uses ~/.cache/gsdgsd:update-check.json regardless of runtime; clear it
+# so the statusline stops showing the stale "⬆ gsd:update" indicator after update.
+rm -f "$HOME/.cache/gsdgsd:update-check.json"
 ```
 
 The SessionStart hook (`gsd-check-update.js`) writes to the detected runtime's cache directory, so preferred/env-derived paths and default paths must all be cleared to prevent stale update indicators.
@@ -605,7 +605,7 @@ Format completion message (changelog was already shown in confirmation step):
 
 ⚠️  Restart your runtime to pick up the new commands.
 
-[View full changelog](https://github.com/gsd-build/get-shit-done/blob/main/CHANGELOG.md)
+[View full changelog](https://github.comgsd:build/get-shit-done/blob/main/CHANGELOG.md)
 ```
 </step>
 
@@ -619,7 +619,7 @@ Check for gsd-local-patches/backup-meta.json in the config directory.
 
 ```
 Local patches were backed up before the update.
-Run `/gsd-update --reapply` to merge your modifications into the new version.
+Run `gsd:update --reapply` to merge your modifications into the new version.
 ```
 
 **If no patches:** Continue normally.

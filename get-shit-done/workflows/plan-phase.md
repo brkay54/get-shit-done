@@ -52,13 +52,13 @@ Parse JSON for: `researcher_model`, `planner_model`, `checker_model`, `research_
 
 **File paths (for <files_to_read> blocks):** `state_path`, `roadmap_path`, `requirements_path`, `context_path`, `research_path`, `verification_path`, `uat_path`, `reviews_path`. These are null if files don't exist.
 
-**If `planning_exists` is false:** Error — run `/gsd-new-project` first.
+**If `planning_exists` is false:** Error — run `gsd:new-project` first.
 
 ## 2. Parse and Normalize Arguments
 
 Extract from $ARGUMENTS: phase number (integer or decimal like `2.1`), flags (`--research`, `--skip-research`, `--research-phase <N>`, `--gaps`, `--skip-verify`, `--skip-ui`, `--prd <filepath>`, `--reviews`, `--text`, `--bounce`, `--skip-bounce`, `--chunked`).
 
-**`--research-phase <N>` — research-only mode (#3042 + #3044).** When this flag is present, parse `<N>` as the phase number (overrides any positional phase argument), set `RESEARCH_ONLY=true`, and treat the rest of this workflow as a research-dispatch only — the planner spawn (step 8), plan-checker, verification, gaps, bounce, and post-planning-gaps blocks all skip on `RESEARCH_ONLY`. Use this for cross-phase research, doc review before committing to a planning approach, and correction-without-replanning loops. Replaces the deleted `/gsd-research-phase` command.
+**`--research-phase <N>` — research-only mode (#3042 + #3044).** When this flag is present, parse `<N>` as the phase number (overrides any positional phase argument), set `RESEARCH_ONLY=true`, and treat the rest of this workflow as a research-dispatch only — the planner spawn (step 8), plan-checker, verification, gaps, bounce, and post-planning-gaps blocks all skip on `RESEARCH_ONLY`. Use this for cross-phase research, doc review before committing to a planning approach, and correction-without-replanning loops. Replaces the deleted `gsd:research-phase` command.
 
 In research-only mode, two modifiers control behavior when `RESEARCH.md` already exists:
 
@@ -111,9 +111,9 @@ Error:
 ```
 No REVIEWS.md found for Phase {N}. Run reviews first:
 
-/gsd-review --phase {N}
+gsd:review --phase {N}
 
-Then re-run /gsd-plan-phase {N} --reviews
+Then re-run gsd:plan-phase {N} --reviews
 ```
 Exit workflow.
 
@@ -273,9 +273,9 @@ If "Run discuss-phase first":
   does not work correctly in nested subcontexts (#1009). Instead, display the command
   and exit so the user runs it as a top-level command:
   ```
-  Run this command first, then re-run /gsd-plan-phase {X} ${GSD_WS}:
+  Run this command first, then re-run gsd:plan-phase {X} ${GSD_WS}:
 
-  /gsd-discuss-phase {X} ${GSD_WS}
+  gsd:discuss-phase {X} ${GSD_WS}
   ```
   **Exit the plan-phase workflow. Do not continue.**
 
@@ -298,19 +298,19 @@ echo "${phase_goal}" | grep -qi "agent\|llm\|rag\|chatbot\|embedding\|langchain\
 **If AI keywords detected AND no AI-SPEC.md:**
 ```
 ◆ Note: This phase appears to involve AI system development.
-  Consider running /gsd-ai-integration-phase {N} before planning to:
+  Consider running gsd:ai-integration-phase {N} before planning to:
   - Select the right framework for your use case
   - Research its docs and best practices
   - Design an evaluation strategy
 
-  Continue planning without AI-SPEC? (non-blocking — /gsd-ai-integration-phase can be run after)
+  Continue planning without AI-SPEC? (non-blocking — gsd:ai-integration-phase can be run after)
 ```
 
 Use AskUserQuestion with options:
 - "Continue — plan without AI-SPEC"
-- "Stop — I'll run /gsd-ai-integration-phase {N} first"
+- "Stop — I'll run gsd:ai-integration-phase {N} first"
 
-If "Stop": Exit with `/gsd-ai-integration-phase {N}` reminder.
+If "Stop": Exit with `gsd:ai-integration-phase {N}` reminder.
 If "Continue": Proceed. (Non-blocking — planner will note AI-SPEC is absent.)
 
 **If `AI_SPEC_FILE` is non-empty:** Extract framework for planner context:
@@ -331,7 +331,7 @@ Three branches in research-only mode (`--research-phase <N>`):
 
 1. **`--view`** (or user picks "View" in the prompt below): print `RESEARCH.md` to stdout, no spawn, exit. If `RESEARCH.md` is missing, error with: `--view requires an existing RESEARCH.md; drop --view to spawn the researcher.`
 2. **`--research`** (force-refresh): re-spawn researcher unconditionally — fall through to "Spawn gsd-phase-researcher" below.
-3. **Neither flag AND `has_research=true`:** emit `RESEARCH.md already exists for Phase ${PHASE}.` and prompt the user with three choices: `1. Update — re-spawn researcher and refresh RESEARCH.md`, `2. View — print existing RESEARCH.md and exit (no spawn)`, `3. Skip — exit without spawning or printing`. Map "Update" → fall through to spawn, "View" → set `VIEW_ONLY=true` and emit RESEARCH.md as in (1), "Skip" → exit cleanly. Mirrors the deleted `/gsd-research-phase` standalone's existing-artifact menu (#3042 parity).
+3. **Neither flag AND `has_research=true`:** emit `RESEARCH.md already exists for Phase ${PHASE}.` and prompt the user with three choices: `1. Update — re-spawn researcher and refresh RESEARCH.md`, `2. View — print existing RESEARCH.md and exit (no spawn)`, `3. Skip — exit without spawning or printing`. Map "Update" → fall through to spawn, "View" → set `VIEW_ONLY=true` and emit RESEARCH.md as in (1), "Skip" → exit cleanly. Mirrors the deleted `gsd:research-phase` standalone's existing-artifact menu (#3042 parity).
 
 ```bash
 if [[ "$VIEW_ONLY" == "true" ]]; then
@@ -404,7 +404,7 @@ Answer: "What do I need to know to PLAN this phase well?"
 </objective>
 
 <files_to_read>
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from gsd:discuss-phase)
 - {requirements_path} (Project requirements)
 - {state_path} (Project decisions and history)
 </files_to_read>
@@ -444,7 +444,7 @@ Task(
 
 **Skip if:** `RESEARCH_ONLY` is `false` (the default).
 
-**If `RESEARCH_ONLY=true`:** the user invoked `/gsd-plan-phase --research-phase <N>` for research-only mode. Do **not** continue to Section 5.5+ (validation strategy, planner, plan-checker, verification, gaps, bounce, post-planning-gaps). Print the research-complete summary and exit cleanly:
+**If `RESEARCH_ONLY=true`:** the user invoked `gsd:plan-phase --research-phase <N>` for research-only mode. Do **not** continue to Section 5.5+ (validation strategy, planner, plan-checker, verification, gaps, bounce, post-planning-gaps). Print the research-complete summary and exit cleanly:
 
 ```text
 ✓ Research-only mode complete (#3042)
@@ -452,8 +452,8 @@ Task(
   Phase:       ${PHASE}
   RESEARCH.md: ${research_path}
 
-Re-run /gsd-plan-phase ${PHASE} to plan the phase using this research,
-or /gsd-plan-phase ${PHASE} --research to refresh research and plan.
+Re-run gsd:plan-phase ${PHASE} to plan the phase using this research,
+or gsd:plan-phase ${PHASE} --research to refresh research and plan.
 ```
 
 This exits the workflow. The planner / plan-checker / verifier blocks below are skipped.
@@ -571,10 +571,10 @@ Output this markdown directly (not as a code block):
 ```
 ## ⚠ UI-SPEC.md missing for Phase {N}
 ▶ Recommended next step:
-`/gsd-ui-phase {N} ${GSD_WS}` — generate UI design contract before planning
+`gsd:ui-phase {N} ${GSD_WS}` — generate UI design contract before planning
 ───────────────────────────────────────────────
 Also available:
-- `/gsd-plan-phase {N} --skip-ui ${GSD_WS}` — plan without UI-SPEC (not recommended for frontend phases)
+- `gsd:plan-phase {N} --skip-ui ${GSD_WS}` — plan without UI-SPEC (not recommended for frontend phases)
 ```
 
 **Exit the plan-phase workflow. Do not continue.**
@@ -690,7 +690,7 @@ VALIDATION_EXISTS=$(ls "${PHASE_DIR}"/*-VALIDATION.md 2>/dev/null | head -1)
 ```
 
 If missing and Nyquist is still enabled/applicable — ask user:
-1. Re-run: `/gsd-plan-phase {PHASE} --research ${GSD_WS}`
+1. Re-run: `gsd:plan-phase {PHASE} --research ${GSD_WS}`
 2. Disable Nyquist with the exact command:
    `gsd-sdk query config-set workflow.nyquist_validation false`
 3. Continue anyway (plans fail Dimension 8)
@@ -728,7 +728,7 @@ Pattern mapper prompt:
 **Padded phase:** {padded_phase}
 
 <files_to_read>
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from gsd:discuss-phase)
 - {research_path} (Technical Research)
 </files_to_read>
 
@@ -780,7 +780,7 @@ Planner prompt:
 - {state_path} (Project State)
 - {roadmap_path} (Roadmap)
 - {requirements_path} (Requirements)
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from gsd:discuss-phase)
 - {research_path} (Technical Research)
 - {PATTERNS_PATH} (Pattern Map — analog files and code excerpts, if exists)
 - {verification_path} (Verification Gaps - if --gaps)
@@ -819,7 +819,7 @@ Each TDD plan gets one feature with RED/GREEN/REFACTOR gate sequence.
 </planning_context>
 
 <downstream_consumer>
-Output consumed by /gsd-execute-phase. Plans need:
+Output consumed by gsd:execute-phase. Plans need:
 - Frontmatter (wave, depends_on, files_modified, autonomous)
 - Tasks in XML format with read_first and acceptance_criteria fields (MANDATORY on every task)
 - Verification criteria
@@ -890,10 +890,10 @@ Task(
 Chunked mode splits the single long-lived planner Task into a short outline Task followed by
 N short per-plan Tasks. Each Task is bounded to ~3–5 min; each plan is committed individually
 for crash resilience. If any Task hangs and the terminal is force-killed, rerunning
-`/gsd-plan-phase {N} --chunked` resumes from the last successfully committed plan.
+`gsd:plan-phase {N} --chunked` resumes from the last successfully committed plan.
 
 **Intended for new or in-progress chunked runs.** To recover plans already written by a prior
-*non-chunked* run, use step 6's "Add more plans" or proceed directly to `/gsd-execute-phase`
+*non-chunked* run, use step 6's "Add more plans" or proceed directly to `gsd:execute-phase`
 — don't start a fresh chunked run over existing non-chunked plans.
 
 ### 8.5.1 Outline Phase (outline-only mode, ~2 min)
@@ -1023,7 +1023,7 @@ arrived). Display:
 Offer 3 options:
 1. **Accept plans** — treat as `## PLANNING COMPLETE` and continue through step 9 `## PLANNING COMPLETE` handling (so `--skip-verify` / `plan_checker_enabled=false` are honored — may skip to step 13 rather than step 10)
 2. **Retry planner** — re-spawn the planner with the same prompt (return to step 8)
-3. **Stop** — exit; user can re-run `/gsd-plan-phase {N}` to resume
+3. **Stop** — exit; user can re-run `gsd:plan-phase {N}` to resume
 
 **If `DISK_PLANS` is 0 and no marker:** The planner produced no output. Treat as
 `## PLANNING INCONCLUSIVE` and handle accordingly.
@@ -1056,7 +1056,7 @@ rest become a follow-up phase
 
 Use AskUserQuestion with these 3 options.
 
-**If "Split":** Use `/gsd-phase --insert` to create the sub-phases, then replan each.
+**If "Split":** Use `gsd:phase --insert` to create the sub-phases, then replan each.
 **If "Proceed":** Return to planner with instruction to attempt all items at full fidelity, accepting more plans/tasks.
 **If "Prioritize":** Use AskUserQuestion (multiSelect) to let user pick which items are "now" vs "later". Create CONTEXT.md for each sub-phase with the selected items.
 
@@ -1085,7 +1085,7 @@ Options:
 Use AskUserQuestion for each gap (or batch if multiple gaps).
 
 **If "Add plan":** Return to planner (step 8) with instruction to add plans covering the missing items, preserving existing plans.
-**If "Split":** Use `/gsd-phase --insert` for overflow items, then replan.
+**If "Split":** Use `gsd:phase --insert` for overflow items, then replan.
 **If "Defer":** Record in CONTEXT.md `## Deferred Ideas` with developer's confirmation. Proceed to step 10.
 
 ## 10. Spawn gsd-plan-checker Agent
@@ -1110,7 +1110,7 @@ Checker prompt:
 - {PHASE_DIR}/*-PLAN.md (Plans to verify)
 - {roadmap_path} (Roadmap)
 - {requirements_path} (Requirements)
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from gsd:discuss-phase)
 - {research_path} (Technical Research — includes Validation Architecture)
 </files_to_read>
 
@@ -1183,7 +1183,7 @@ Windows stdio hang pattern — the subagent finished but the return never arrive
 Offer 3 options:
 1. **Accept verification** — treat as `## VERIFICATION PASSED` and continue to step 13
 2. **Retry checker** — re-spawn the checker with the same prompt (return to step 10)
-3. **Stop** — exit; user can re-run `/gsd-plan-phase {N}` to resume
+3. **Stop** — exit; user can re-run `gsd:plan-phase {N}` to resume
 
 **If `DISK_PLANS` is 0:** No plans on disk — something is seriously wrong. Display error and stop.
 
@@ -1212,7 +1212,7 @@ Display: `Revision iteration {N}/3 -- {blocker_count} blockers, {warning_count} 
   **If `stall_reentry_count >= 2`:**
     Display: `Stall persists after 2 re-planning attempts. The following issues could not be resolved automatically:`
     List the remaining issues from the checker.
-    Suggest: "Consider resolving these issues manually or running `/gsd-debug` to investigate root causes."
+    Suggest: "Consider resolving these issues manually or running `gsd:debug` to investigate root causes."
     Options: "Proceed anyway" | "Abandon"
     If "Proceed anyway": accept current plans and continue to step 13.
     If "Abandon": stop workflow.
@@ -1228,7 +1228,7 @@ Revision prompt:
 
 <files_to_read>
 - {PHASE_DIR}/*-PLAN.md (Existing plans)
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from gsd:discuss-phase)
 </files_to_read>
 
 ${AGENT_SKILLS_PLANNER}
@@ -1498,7 +1498,7 @@ one place before execution begins.
 ```bash
 POST_PLANNING_GAPS=$(gsd-sdk query config-get workflow.post_planning_gaps --default true 2>/dev/null || echo true)
 if [ "$POST_PLANNING_GAPS" = "true" ]; then
-  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" gap-analysis --phase-dir "${PHASE_DIR}"
+  node "$HOME/.claude/get-shit-done/bingsd:tools.cjs" gap-analysis --phase-dir "${PHASE_DIR}"
 fi
 ```
 
@@ -1529,7 +1529,7 @@ sort within source):**
 - Both missing or `<decisions>` block missing → "No requirements or decisions to check" line, no error.
 
 This step is non-blocking. If items are reported as not covered, the user may
-re-run `/gsd-plan-phase --gaps` to add plans, or proceed to execute-phase as-is.
+re-run `gsd:plan-phase --gaps` to add plans, or proceed to execute-phase as-is.
 
 ## 14. Present Final Status
 
@@ -1586,14 +1586,14 @@ The `--no-transition` flag tells execute-phase to return status after verificati
 
   Auto-advance pipeline finished.
 
-  Next: /gsd-discuss-phase ${NEXT_PHASE} --auto ${GSD_WS}
+  Next: gsd:discuss-phase ${NEXT_PHASE} --auto ${GSD_WS}
   ```
 - **GAPS FOUND / VERIFICATION FAILED** → Display result, stop chain:
   ```
   Auto-advance stopped: Execution needs review.
 
   Review the output above and continue manually:
-  /gsd-execute-phase ${PHASE} ${GSD_WS}
+  gsd:execute-phase ${PHASE} ${GSD_WS}
   ```
 
 **If neither `--auto` nor config enabled:**
@@ -1626,15 +1626,15 @@ Verification: {Passed | Passed with override | Skipped}
 
 /clear then:
 
-/gsd-execute-phase {X} ${GSD_WS}
+gsd:execute-phase {X} ${GSD_WS}
 
 ───────────────────────────────────────────────────────────────
 
 **Also available:**
 - cat .planning/phases/{phase-dir}/*-PLAN.md — review plans
-- /gsd-plan-phase {X} --research — re-research first
-- /gsd-review --phase {X} --all — peer review plans with external AIs
-- /gsd-plan-phase {X} --reviews — replan incorporating review feedback
+- gsd:plan-phase {X} --research — re-research first
+- gsd:review --phase {X} --all — peer review plans with external AIs
+- gsd:plan-phase {X} --reviews — replan incorporating review feedback
 
 ───────────────────────────────────────────────────────────────
 </offer_next>
@@ -1655,11 +1655,11 @@ stdio deadlocks with MCP servers — see Claude Code issue anthropics/claude-cod
    Remove-Item -Recurse -Force "$env:USERPROFILE\.claude\tasks\*" -ErrorAction SilentlyContinue
    ```
 4. **Reduce MCP server count:** Temporarily disable non-essential MCP servers in settings.json
-5. **Retry:** Restart Claude Code and run `/gsd-plan-phase` again
+5. **Retry:** Restart Claude Code and run `gsd:plan-phase` again
 
 If freezes persist, try `--skip-research` to reduce the agent chain from 3 to 2 agents:
 ```
-/gsd-plan-phase N --skip-research
+gsd:plan-phase N --skip-research
 ```
 </windows_troubleshooting>
 

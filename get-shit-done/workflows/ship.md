@@ -185,7 +185,7 @@ If `REVIEW_CMD` is non-empty and not `"null"`, run the external review:
    Construct a review prompt containing the diff, diff stats, and phase context, then pipe it to the configured command:
    ```bash
    REVIEW_PROMPT="You are reviewing a pull request.\n\nDiff stats:\n${DIFF_STATS}\n\nPhase context:\n${STATE_STATUS}\n\nFull diff:\n${DIFF}\n\nRespond with JSON: { \"verdict\": \"APPROVED\" or \"REVISE\", \"confidence\": 0-100, \"summary\": \"...\", \"issues\": [{\"severity\": \"...\", \"file\": \"...\", \"line_range\": \"...\", \"description\": \"...\", \"suggestion\": \"...\"}] }"
-   REVIEW_OUTPUT=$(echo "${REVIEW_PROMPT}" | timeout 120 ${REVIEW_CMD} 2>/tmp/gsd-review-stderr.log)
+   REVIEW_OUTPUT=$(echo "${REVIEW_PROMPT}" | timeout 120 ${REVIEW_CMD} 2>/tmpgsd:review-stderr.log)
    REVIEW_EXIT=$?
    ```
 
@@ -193,7 +193,7 @@ If `REVIEW_CMD` is non-empty and not `"null"`, run the external review:
    If `REVIEW_EXIT` is non-zero or the command times out:
    ```bash
    if [ $REVIEW_EXIT -ne 0 ]; then
-     REVIEW_STDERR=$(cat /tmp/gsd-review-stderr.log 2>/dev/null)
+     REVIEW_STDERR=$(cat /tmpgsd:review-stderr.log 2>/dev/null)
      echo "WARNING: External review command failed (exit ${REVIEW_EXIT}). stderr: ${REVIEW_STDERR}"
      echo "Continuing with manual review flow..."
    fi
@@ -276,8 +276,8 @@ Requirements: {N} REQ-IDs addressed
 Next steps:
 - Review/approve PR
 - Merge when CI passes
-- /gsd-complete-milestone (if last phase in milestone)
-- /gsd-progress (to see what's next)
+- gsd:complete-milestone (if last phase in milestone)
+- gsd:progress (to see what's next)
 
 ───────────────────────────────────────────────────────────────
 ```
@@ -288,9 +288,9 @@ Next steps:
 <offer_next>
 After shipping:
 
-- /gsd-complete-milestone — if all phases in milestone are done
-- /gsd-progress — see overall project state
-- /gsd-execute-phase {next} — continue to next phase
+- gsd:complete-milestone — if all phases in milestone are done
+- gsd:progress — see overall project state
+- gsd:execute-phase {next} — continue to next phase
 </offer_next>
 
 <success_criteria>

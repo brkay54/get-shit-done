@@ -30,7 +30,7 @@ SECURITY_CFG=$(gsd-sdk query config-get workflow.security_enforcement --raw 2>/d
 
 **Model resolution:** If `AUDITOR_MODEL` is `"inherit"`, omit the `model=` parameter from all `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when `AUDITOR_MODEL` is an explicit model name.
 
-If `SECURITY_CFG` is `false`: exit with "Security enforcement disabled. Enable via /gsd-settings."
+If `SECURITY_CFG` is `false`: exit with "Security enforcement disabled. Enable via gsd:settings."
 
 Display banner: `GSD > SECURE PHASE {N}: {name}`
 
@@ -44,7 +44,7 @@ SUMMARY_FILES=$(ls "${PHASE_DIR}"/*-SUMMARY.md 2>/dev/null)
 
 - **State A** (`SECURITY_FILE` non-empty): Audit existing
 - **State B** (`SECURITY_FILE` empty, `PLAN_FILES` and `SUMMARY_FILES` non-empty): Run from artifacts
-- **State C** (`SUMMARY_FILES` empty): Exit — "Phase {N} not executed. Run /gsd-execute-phase {N} first."
+- **State C** (`SUMMARY_FILES` empty): Exit — "Phase {N} not executed. Run gsd:execute-phase {N} first."
 
 ## 2. Discovery
 
@@ -86,7 +86,7 @@ Call AskUserQuestion with threat table and options:
 
 ```
 Task(
-  prompt="Read ~/.claude/agents/gsd-security-auditor.md for instructions.\n\n" +
+  prompt="Read ~/.claude/agentsgsd:security-auditor.md for instructions.\n\n" +
     "<files_to_read>{PLAN, SUMMARY, impl files, SECURITY.md}</files_to_read>" +
     "<threat_register>{threat register}</threat_register>" +
     "<config>asvs_level: {SECURITY_ASVS}, block_on: {SECURITY_BLOCK_ON}</config>" +
@@ -129,7 +129,7 @@ Handle return:
 ```
 GSD > PHASE {N} SECURITY BLOCKED
 {K} threats open — phase advancement blocked until threats_open: 0
-▶ Fix mitigations then re-run: /gsd-secure-phase {N}
+▶ Fix mitigations then re-run: gsd:secure-phase {N}
 ▶ Or document accepted risks in SECURITY.md and re-run.
 ```
 
@@ -147,8 +147,8 @@ gsd-sdk query commit "docs(phase-${PHASE}): add/update security threat verificat
 ```
 GSD > PHASE {N} THREAT-SECURE
 threats_open: 0 — all threats have dispositions.
-▶ /gsd-validate-phase {N}    validate test coverage
-▶ /gsd-verify-work {N}       run UAT
+▶ gsd:validate-phase {N}    validate test coverage
+▶ gsd:verify-work {N}       run UAT
 ```
 
 Display `/clear` reminder.

@@ -9,7 +9,7 @@ Read all files referenced by the invoking prompt's execution_context before star
 
 Key references:
 - @$HOME/.claude/get-shit-done/references/ui-brand.md (display patterns)
-- @$HOME/.claude/agents/gsd-user-profiler.md (profiler agent definition)
+- @$HOME/.claude/agentsgsd:user-profiler.md (profiler agent definition)
 - @$HOME/.claude/get-shit-done/references/user-profiling.md (profiling reference doc)
 </required_reading>
 
@@ -120,7 +120,7 @@ Use AskUserQuestion:
 - options:
   - "Let's go" -- Proceed to step 3 (session analysis)
   - "Use questionnaire instead" -- Jump to step 4b (questionnaire path)
-  - "Not now" -- Display "No worries. Run /gsd-profile-user when ready." and exit
+  - "Not now" -- Display "No worries. Run gsd:profile-user when ready." and exit
 
 ---
 
@@ -217,7 +217,7 @@ Collect all answers into an answers JSON object mapping dimension keys to select
 
 **Save answers to temp file:**
 ```bash
-ANSWERS_PATH=$(mktemp /tmp/gsd-profile-answers-XXXXXX.json)
+ANSWERS_PATH=$(mktemp /tmpgsd:profile-answers-XXXXXX.json)
 ```
 
 Write the answers JSON to `$ANSWERS_PATH`.
@@ -231,7 +231,7 @@ Parse the analysis JSON from the result.
 
 Save analysis JSON to a temp file:
 ```bash
-ANALYSIS_PATH=$(mktemp /tmp/gsd-profile-analysis-XXXXXX.json)
+ANALYSIS_PATH=$(mktemp /tmpgsd:profile-analysis-XXXXXX.json)
 ```
 
 Write the analysis JSON to `$ANALYSIS_PATH`.
@@ -335,7 +335,7 @@ Use AskUserQuestion with multiSelect:
 - header: "Artifacts"
 - question: "Which artifacts should I generate?"
 - options (ALL pre-selected by default):
-  - "/gsd-dev-preferences command file" -- "Load your preferences in any session"
+  - "gsd:dev-preferences command file" -- "Load your preferences in any session"
   - "CLAUDE.md profile section" -- "Add profile to this project's CLAUDE.md"
   - "Global CLAUDE.md" -- "Add profile to $HOME/.claude/CLAUDE.md for all projects"
 
@@ -347,13 +347,13 @@ Use AskUserQuestion with multiSelect:
 
 Generate selected artifacts sequentially (file I/O is fast, no benefit from parallel agents):
 
-**For /gsd-dev-preferences (if selected):**
+**For gsd:dev-preferences (if selected):**
 
 ```bash
 gsd-sdk query generate-dev-preferences --analysis "$ANALYSIS_PATH" --json
 ```
 
-Display: "✓ Generated /gsd-dev-preferences at $HOME/.claude/skills/gsd-dev-preferences/SKILL.md"
+Display: "✓ Generated gsd:dev-preferences at $HOME/.claude/skillsgsd:dev-preferences/SKILL.md"
 
 **For CLAUDE.md profile section (if selected):**
 
@@ -412,7 +412,7 @@ Your profile:    $HOME/.claude/get-shit-done/USER-PROFILE.md
 Then list paths for each generated artifact:
 ```
 Artifacts:
-  ✓ /gsd-dev-preferences   $HOME/.claude/skills/gsd-dev-preferences/SKILL.md
+  ✓ gsd:dev-preferences   $HOME/.claude/skillsgsd:dev-preferences/SKILL.md
   ✓ CLAUDE.md section       ./CLAUDE.md
   ✓ Global CLAUDE.md        $HOME/.claude/CLAUDE.md
 ```

@@ -23,7 +23,7 @@ Mode routing:
 | Flag | Action | Workflow |
 |------|--------|----------|
 | --new | Create workspace with worktree/clone strategy | new-workspace |
-| --list | Scan ~/gsd-workspaces/, show summary table | list-workspaces |
+| --list | Scan ~gsd:workspaces/, show summary table | list-workspaces |
 | --remove | Confirm and remove workspace directory | remove-workspace |
 
 </routing>

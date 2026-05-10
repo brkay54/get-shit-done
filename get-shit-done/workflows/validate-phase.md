@@ -30,7 +30,7 @@ NYQUIST_CFG=$(gsd-sdk query config-get workflow.nyquist_validation --raw)
 
 **Model resolution:** If `AUDITOR_MODEL` is `"inherit"`, omit the `model=` parameter from all `Task()` calls — do NOT pass `model="inherit"` to Task. Omitting the `model=` parameter causes Claude Code to inherit the current orchestrator model automatically. Only set `model=` when `AUDITOR_MODEL` is an explicit model name.
 
-If `NYQUIST_CFG` is `false`: exit with "Nyquist validation is disabled. Enable via /gsd-settings."
+If `NYQUIST_CFG` is `false`: exit with "Nyquist validation is disabled. Enable via gsd:settings."
 
 Display banner: `GSD > VALIDATE PHASE {N}: {name}`
 
@@ -43,7 +43,7 @@ SUMMARY_FILES=$(ls "${PHASE_DIR}"/*-SUMMARY.md 2>/dev/null)
 
 - **State A** (`VALIDATION_FILE` non-empty): Audit existing
 - **State B** (`VALIDATION_FILE` empty, `SUMMARY_FILES` non-empty): Reconstruct from artifacts
-- **State C** (`SUMMARY_FILES` empty): Exit — "Phase {N} not executed. Run /gsd-execute-phase {N} ${GSD_WS} first."
+- **State C** (`SUMMARY_FILES` empty): Exit — "Phase {N} not executed. Run gsd:execute-phase {N} ${GSD_WS} first."
 
 ## 2. Discovery
 
@@ -96,7 +96,7 @@ Call AskUserQuestion with gap table and options:
 
 ```
 Task(
-  prompt="Read ~/.claude/agents/gsd-nyquist-auditor.md for instructions.\n\n" +
+  prompt="Read ~/.claude/agentsgsd:nyquist-auditor.md for instructions.\n\n" +
     "<files_to_read>{PLAN, SUMMARY, impl files, VALIDATION.md}</files_to_read>" +
     "<gaps>{gap list}</gaps>" +
     "<test_infrastructure>{framework, config, commands}</test_infrastructure>" +
@@ -150,14 +150,14 @@ gsd-sdk query commit "docs(phase-${PHASE}): add/update validation strategy"
 ```
 GSD > PHASE {N} IS NYQUIST-COMPLIANT
 All requirements have automated verification.
-▶ Next: /gsd-audit-milestone ${GSD_WS}
+▶ Next: gsd:audit-milestone ${GSD_WS}
 ```
 
 **Partial:**
 ```
 GSD > PHASE {N} VALIDATED (PARTIAL)
 {M} automated, {K} manual-only.
-▶ Retry: /gsd-validate-phase {N} ${GSD_WS}
+▶ Retry: gsd:validate-phase {N} ${GSD_WS}
 ```
 
 Display `/clear` reminder.
