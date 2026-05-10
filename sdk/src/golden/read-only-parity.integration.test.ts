@@ -17,13 +17,34 @@ const STABLE_JSON_PARITY_ROWS = READ_ONLY_JSON_PARITY_ROWS.filter(
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
 
+/**
+ * Normalize the resolve-model SDK/CJS divergence: SDK now returns the
+ * `'inherit'` sentinel for omit/missing-config (workflows skip `model=`);
+ * CJS still returns `''`. Both signal the same intent — workflows must
+ * skip the model override — so parity treats them as equivalent for the
+ * `model` field. See sdk/src/query/config-query.ts (resolveModel) for
+ * the SDK contract.
+ */
+const normalizeResolveModelDivergence = (data: unknown): unknown => {
+  if (!data || typeof data !== 'object') return data;
+  const o = { ...(data as Record<string, unknown>) };
+  if (o.model === '' || o.model === 'inherit') o.model = '<inherit-or-empty>';
+  return o;
+};
+
 describe('Read-only golden parity (JSON toEqual)', () => {
   it.each(STABLE_JSON_PARITY_ROWS)('$canonical matches gsd-tools.cjs JSON', async (row) => {
 
     const gsdOutput = await captureGsdToolsOutput(row.cjs, row.cjsArgs, REPO_ROOT);
     const registry = createRegistry();
     const sdkResult = await registry.dispatch(row.canonical, row.sdkArgs, REPO_ROOT);
-    expect(sdkResult.data).toEqual(gsdOutput);
+
+    if (row.canonical === 'resolve-model') {
+      expect(normalizeResolveModelDivergence(sdkResult.data))
+        .toEqual(normalizeResolveModelDivergence(gsdOutput));
+    } else {
+      expect(sdkResult.data).toEqual(gsdOutput);
+    }
   });
 });
 

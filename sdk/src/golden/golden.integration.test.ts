@@ -502,13 +502,44 @@ describe('Golden file tests', () => {
     });
   });
 
+  /**
+   * Model fields where SDK and legacy CJS intentionally diverge for the
+   * "no model override" case. SDK returns the `'inherit'` sentinel
+   * (workflows recognize it and drop the `model=` parameter from spawned
+   * Task() calls); CJS returns `''` (the older empty-string contract that
+   * leaked into workflow templates as a literal `model=""` or, via
+   * getModelAlias coercion, a hard-pin to Sonnet that defeated the user's
+   * profile). Both signal the same intent — workflows must skip the model
+   * override — so parity comparisons treat them as equivalent.
+   *
+   * See sdk/src/query/config-query.ts (resolveModel) and
+   * sdk/src/query/init.ts (getModelAlias) for the SDK contract.
+   */
+  const MODEL_INHERIT_FIELDS = new Set([
+    'researcher_model',
+    'planner_model',
+    'checker_model',
+    'executor_model',
+    'verifier_model',
+  ]);
+
+  const normalizeInheritDivergence = (obj: Record<string, unknown>): Record<string, unknown> => {
+    const o = { ...obj };
+    for (const k of Object.keys(o)) {
+      if (MODEL_INHERIT_FIELDS.has(k) && (o[k] === '' || o[k] === 'inherit')) {
+        o[k] = '<inherit-or-empty>';
+      }
+    }
+    return o;
+  };
+
   /** Normalize init.* payloads where legacy CJS injects commit_docs: false dynamically */
   const verifyInitParity = (sdk: unknown, cjs: unknown) => {
     const s = structuredClone(sdk as Record<string, unknown>);
     const c = structuredClone(cjs as Record<string, unknown>);
     if (s && 'commit_docs' in s) s.commit_docs = true;
     if (c && 'commit_docs' in c) c.commit_docs = true;
-    expect(s).toEqual(c);
+    expect(normalizeInheritDivergence(s)).toEqual(normalizeInheritDivergence(c));
   };
 
   describe('validate.consistency', () => {
